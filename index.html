@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Rekapan Lembur</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --sidebar: #2c3e50;
+            --text: #333;
+            --bg: #f4f6f9;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar);
+            color: white;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .sidebar-menu li:hover, .sidebar-menu li.active {
+            background: rgba(255,255,255,0.1);
+        }
+        .sidebar-menu li i {
+            margin-right: 10px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        input, select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        button {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .logout-btn {
+            background: var(--danger);
+            margin-top: 20px;
+        }
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #f8f9fa;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .success {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        /* Horizontal Form Layout */
+        .row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        .col {
+            flex: 1;
+        }
+        .col-auto {
+            width: auto;
+        }
+        .col-shrink {
+            flex: 0 0 auto;
+            width: auto;
+        }
+        .plant-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .plant-label {
+            font-weight: bold;
+            min-width: 70px;
+        }
+        .export-btn {
+            background: #27ae60;
+            margin-top: 20px;
+        }
+        .export-btn:hover {
+            background: #229954;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        /* Admin Only */
+        .admin-only {
+            display: none;
+        }
+        .admin-visible {
+            display: block !important;
+        }
+
+        /* Backup Restore Section */
+        .backup-section {
+            background: #fef9e7;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #f1c40f;
+            margin: 20px 0;
+        }
+        .backup-section h3 {
+            color: #e67e22;
+            margin-bottom: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+                padding: 10px 0;
+            }
+            .sidebar-header h3, .sidebar-menu li span {
+                display: none;
+            }
+            .sidebar-menu li i {
+                margin: 0;
+                font-size: 1.2em;
+            }
+            .row {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h3>📊 Lembur App</h3>
+        </div>
+        <ul class="sidebar-menu">
+            <li data-tab="rekap" class="active">
+                <i>📋</i> <span>Rekap Over Time</span>
+            </li>
+            <li data-tab="summary" class="admin-only">
+                <i>📈</i> <span>Summarize</span>
+            </li>
+            <li data-tab="setting" class="admin-only">
+                <i>⚙️</i> <span>Setting</span>
+            </li>
+        </ul>
+        <div style="margin-top: auto; padding: 20px;">
+            <div id="user-info" style="margin-bottom: 15px;">
+                <strong>User:</strong> <span id="nama-user"></span>
+            </div>
+            <button id="btn-logout" class="logout-btn">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Login Section -->
+            <div id="login-section">
+                <h1>🔐 Login Rekapan Lembur</h1>
+                <div class="form-group">
+                    <label for="username">Nama PIC / Admin:</label>
+                    <select id="username" required>
+                        <option value="">-- Pilih Nama --</option>
+                        <option value="Agung Setyawan">Agung Setyawan</option>
+                        <option value="Fahmi Ardiansyah">Fahmi Ardiansyah</option>
+                        <option value="Drajat Triono">Drajat Triono</option>
+                        <option value="Wiyanto">Wiyanto</option>
+                        <option value="Nur Fauziah">Nur Fauziah</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" placeholder="Masukkan password" required>
+                </div>
+                <button id="btn-login">Login</button>
+            </div>
+
+            <!-- Tab Contents -->
+            <!-- Tab 1: Rekap OT -->
+            <div id="tab-rekap" class="tab-content active">
+                <h1>📝 Input & Rekap Lembur - <span id="nama-user-title"></span></h1>
+
+                <h2>Input Lembur Hari Ini</h2>
+                <div class="row">
+                    <div class="col">
+                        <label for="tanggal">Tanggal</label>
+                        <input type="date" id="tanggal" required>
+                    </div>
+                    <div class="col">
+                        <label for="jam-mulai">Jam Mulai</label>
+                        <input type="time" id="jam-mulai" required>
+                    </div>
+                    <div class="col">
+                        <label for="jam-selesai">Jam Selesai</label>
+                        <input type="time" id="jam-selesai" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col" style="flex: 0 0 150px;">
+                        <label for="total-project">Total Project</label>
+                        <input type="number" id="total-project" min="1" max="5" value="1">
+                    </div>
+                    <div class="col" style="flex: 0 0 150px;">
+                        <label for="total-plant">Total Plant</label>
+                        <input type="number" id="total-plant" min="1" max="5" value="1" oninput="generatePlantDropdowns()">
+                    </div>
+                    <div class="col" style="flex: 0 0 200px;">
+                        <label>Plant Name</label>
+                        <div id="plant-dropdowns-inline" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 5px;"></div>
+                    </div>
+                    <div class="col">
+                        <label for="volume">Volume (m³)</label>
+                        <input type="number" id="volume" step="0.1" placeholder="Contoh: 50.5">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="uraian-tugas">Uraian Tugas</label>
+                    <textarea id="uraian-tugas" rows="3" placeholder="Deskripsikan tugas lembur..."></textarea>
+                </div>
+
+                <button id="btn-simpan">Simpan Data Lembur</button>
+                <button id="btn-export" class="export-btn">Export ke Excel</button>
+                <p id="pesan"></p>
+
+                <h2>Rekap Lembur Bulan Ini</h2>
+                <div class="form-group">
+                    <label for="filter-bulan">Filter Bulan:</label>
+                    <input type="month" id="filter-bulan">
+                </div>
+                <button id="btn-filter">Tampilkan</button>
+
+                <table id="tabel-lembur">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Jam Mulai</th>
+                            <th>Jam Selesai</th>
+                            <th>Total Jam</th>
+                            <th>Plant</th>
+                            <th>Volume (m³)</th>
+                            <th>Uraian Tugas</th>
+                            <th>Last Update</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-tabel">
+                        <!-- Data akan muncul di sini -->
+                    </tbody>
+                </table>
+
+                <h3>Total Lembur Bulan Ini: <span id="total-jam">0.00</span> jam</h3>
+            </div>
+
+            <!-- Tab 2: Summary (Admin Only) -->
+            <div id="tab-summary" class="tab-content admin-only">
+                <h1>📈 Summary Semua PIC</h1>
+
+                <div class="chart-container">
+                    <canvas id="summaryChart"></canvas>
+                </div>
+
+                <table id="tabel-summary">
+                    <thead>
+                        <tr>
+                            <th>Nama PIC</th>
+                            <th>Total Jam Lembur</th>
+                            <th>Total Entry</th>
+                            <th>Last Update</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-summary">
+                        <!-- Data summary akan muncul di sini -->
+                    </tbody>
+                </table>
+
+                <button id="btn-export-summary" class="export-btn">Export Summary ke Excel</button>
+            </div>
+
+            <!-- Tab 3: Setting (Admin Only) -->
+            <div id="tab-setting" class="tab-content admin-only">
+                <h1>⚙️ Setting Admin</h1>
+
+                <h3>🔧 Kelola PIC</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="new-pic-name">Nama PIC Baru</label>
+                        <input type="text" id="new-pic-name" placeholder="Contoh: Budi Santoso">
+                    </div>
+                    <div class="col">
+                        <label for="new-pic-pass">Password</label>
+                        <input type="text" id="new-pic-pass" placeholder="Contoh: 11111">
+                    </div>
+                    <div class="col-shrink" style="align-self: flex-end;">
+                        <button id="btn-add-pic" style="width: auto; padding: 10px 20px;">➕ Tambah PIC</button>
+                    </div>
+                </div>
+
+                <h3>🔑 Ganti Password PIC</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="edit-pic-name">Pilih PIC</label>
+                        <select id="edit-pic-name">
+                            <option value="">-- Pilih PIC --</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label for="edit-pic-pass">Password Baru</label>
+                        <input type="text" id="edit-pic-pass" placeholder="Password baru">
+                    </div>
+                    <div class="col-shrink" style="align-self: flex-end;">
+                        <button id="btn-edit-pic" style="width: auto; padding: 10px 20px;">🔄 Update Password</button>
+                    </div>
+                </div>
+
+                <h3>🗑️ Hapus PIC</h3>
+                <div class="row">
+                    <div class="col">
+                        <label for="delete-pic-name">Pilih PIC untuk dihapus</label>
+                        <select id="delete-pic-name">
+                            <option value="">-- Pilih PIC --</option>
+                        </select>
+                    </div>
+                    <div class="col-shrink" style="align-self: flex-end;">
+                        <button id="btn-delete-pic" style="width: auto; padding: 10px 20px; background: var(--danger);">🗑️ Hapus PIC</button>
+                    </div>
+                </div>
+
+                <!-- ============= BACKUP & RESTORE SECTION ============= -->
+                <div class="backup-section">
+                    <h3>💾 Backup & Restore Data</h3>
+                    <p style="margin-bottom: 15px; color: #e67e22;">
+                        ⚠️ Fitur ini untuk mencegah kehilangan data jika cache browser dihapus.
+                    </p>
+                    <div class="row">
+                        <div class="col">
+                            <button id="btn-backup" style="width: auto; padding: 12px 24px; background: #e67e22;">
+                                📥 Backup Semua Data
+                            </button>
+                        </div>
+                        <div class="col">
+                            <input type="file" id="file-restore" accept=".json" style="width: 100%;">
+                        </div>
+                        <div class="col-shrink" style="align-self: flex-end;">
+                            <button id="btn-restore" style="width: auto; padding: 10px 20px; background: #e67e22;">
+                                📤 Restore Data
+                            </button>
+                        </div>
+                    </div>
+                    <p id="backup-restore-pesan" style="margin-top: 10px;"></p>
+                </div>
+                <!-- =================================================== -->
+
+                <div id="setting-pesan" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const loginSection = document.getElementById('login-section');
+        const sidebarMenuItems = document.querySelectorAll('.sidebar-menu li');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const namaUserSpan = document.getElementById('nama-user');
+        const namaUserTitle = document.getElementById('nama-user-title');
+        const usernameSelect = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const btnLogin = document.getElementById('btn-login');
+        const btnLogout = document.getElementById('btn-logout');
+
+        // Rekap Tab Elements
+        const tanggalInput = document.getElementById('tanggal');
+        const jamMulai = document.getElementById('jam-mulai');
+        const jamSelesai = document.getElementById('jam-selesai');
+        const totalProject = document.getElementById('total-project');
+        const totalPlant = document.getElementById('total-plant');
+        const plantDropdownsInline = document.getElementById('plant-dropdowns-inline');
+        const volumeInput = document.getElementById('volume');
+        const uraianTugas = document.getElementById('uraian-tugas');
+        const btnSimpan = document.getElementById('btn-simpan');
+        const btnExport = document.getElementById('btn-export');
+        const pesan = document.getElementById('pesan');
+        const filterBulan = document.getElementById('filter-bulan');
+        const btnFilter = document.getElementById('btn-filter');
+        const bodyTabel = document.getElementById('body-tabel');
+        const totalJamSpan = document.getElementById('total-jam');
+
+        // Summary Tab Elements
+        const bodySummary = document.getElementById('body-summary');
+        const btnExportSummary = document.getElementById('btn-export-summary');
+
+        // Setting Tab Elements
+        const newPicName = document.getElementById('new-pic-name');
+        const newPicPass = document.getElementById('new-pic-pass');
+        const btnAddPic = document.getElementById('btn-add-pic');
+        const editPicName = document.getElementById('edit-pic-name');
+        const editPicPass = document.getElementById('edit-pic-pass');
+        const btnEditPic = document.getElementById('btn-edit-pic');
+        const deletePicName = document.getElementById('delete-pic-name');
+        const btnDeletePic = document.getElementById('btn-delete-pic');
+        const settingPesan = document.getElementById('setting-pesan');
+
+        // Backup & Restore Elements
+        const btnBackup = document.getElementById('btn-backup');
+        const fileRestore = document.getElementById('file-restore');
+        const btnRestore = document.getElementById('btn-restore');
+        const backupRestorePesan = document.getElementById('backup-restore-pesan');
+
+        // Chart
+        let summaryChart = null;
+
+        // Daftar user dan password (disimpan di localStorage agar bisa diubah admin)
+        function initUsers() {
+            const defaultUsers = {
+                "Agung Setyawan": "12345",
+                "Fahmi Ardiansyah": "67890",
+                "Drajat Triono": "45678",
+                "Wiyanto": "23456",
+                "Nur Fauziah": "54321",
+                "admin": "123456789"
+            };
+            if (!localStorage.getItem('app_users')) {
+                localStorage.setItem('app_users', JSON.stringify(defaultUsers));
+            }
+        }
+
+        // List Plant
+        const plants = ["Denpasar2", "Gianyar", "Manyar", "Manukan", "Kediri", "Gempol", "Krian"];
+
+        // Event Listeners
+        btnLogin.addEventListener('click', login);
+        btnLogout.addEventListener('click', logout);
+        btnSimpan.addEventListener('click', simpanLembur);
+        btnFilter.addEventListener('click', tampilkanData);
+        btnExport.addEventListener('click', exportToExcel);
+        btnExportSummary.addEventListener('click', exportSummaryToExcel);
+
+        // Setting Event Listeners
+        btnAddPic.addEventListener('click', tambahPIC);
+        btnEditPic.addEventListener('click', editPasswordPIC);
+        btnDeletePic.addEventListener('click', hapusPIC);
+
+        // Backup & Restore Event Listeners
+        btnBackup.addEventListener('click', backupData);
+        btnRestore.addEventListener('click', restoreData);
+
+        // Sidebar Tab Navigation
+        sidebarMenuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const tabId = item.getAttribute('data-tab');
+                
+                // Update active class
+                sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Show selected tab
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+
+                // Load data if needed
+                if (tabId === 'summary') {
+                    loadSummaryData();
+                } else if (tabId === 'setting') {
+                    loadPICList();
+                }
+            });
+        });
+
+        // Generate Plant Dropdowns (inline)
+        function generatePlantDropdowns() {
+            const count = parseInt(totalPlant.value) || 1;
+            plantDropdownsInline.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                const select = document.createElement('select');
+                select.className = 'plant-select';
+                select.name = `plant-${i}`;
+                select.style.width = '120px';
+                select.innerHTML = `
+                    <option value="">Pilih</option>
+                    ${plants.map(p => `<option value="${p}">${p}</option>`).join('')}
+                `;
+                plantDropdownsInline.appendChild(select);
+            }
+        }
+
+        // Login Function
+        function login() {
+            const username = usernameSelect.value;
+            const password = passwordInput.value;
+
+            if (!username || !password) {
+                alert("Silakan isi semua field!");
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            if (!users[username] || users[username] !== password) {
+                alert("Username atau password salah!");
+                return;
+            }
+
+            localStorage.setItem('loggedInUser', username);
+            localStorage.setItem('loginTime', new Date().toISOString());
+            tampilkanAplikasi();
+        }
+
+        // Logout Function
+        function logout() {
+            localStorage.removeItem('loggedInUser');
+            localStorage.removeItem('loginTime');
+            location.reload();
+        }
+
+        // Tampilkan Aplikasi setelah login
+        function tampilkanAplikasi() {
+            const user = localStorage.getItem('loggedInUser');
+            if (!user) {
+                loginSection.classList.remove('hidden');
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                return;
+            }
+
+            initUsers(); // Pastikan users ada
+            namaUserSpan.textContent = user;
+            namaUserTitle.textContent = user;
+            loginSection.classList.add('hidden');
+
+            // Tampilkan/Menyembunyikan menu admin
+            if (user === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('admin-visible'));
+            } else {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-visible'));
+            }
+
+            // Set default tanggal
+            const today = new Date().toISOString().split('T')[0];
+            tanggalInput.value = today;
+            filterBulan.value = today.slice(0, 7);
+
+            // Generate plant dropdowns
+            generatePlantDropdowns();
+
+            // Tampilkan tab default
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById('tab-rekap').classList.add('active');
+            sidebarMenuItems.forEach(item => item.classList.remove('active'));
+            document.querySelector('[data-tab="rekap"]').classList.add('active');
+
+            // Load data
+            tampilkanData();
+        }
+
+        // Simpan Data Lembur
+        function simpanLembur() {
+            const user = localStorage.getItem('loggedInUser');
+            const tanggal = tanggalInput.value;
+            const mulai = jamMulai.value;
+            const selesai = jamSelesai.value;
+            const totalProjectVal = totalProject.value;
+            const totalPlantVal = totalPlant.value;
+            const volume = volumeInput.value;
+            const uraian = uraianTugas.value;
+            const now = new Date().toLocaleString('id-ID');
+
+            // Ambil semua pilihan plant
+            const plantValues = [];
+            document.querySelectorAll('.plant-select').forEach(select => {
+                if (select.value) plantValues.push(select.value);
+            });
+
+            if (!tanggal || !mulai || !selesai || !totalProjectVal || !totalPlantVal) {
+                pesan.textContent = "Semua field harus diisi!";
+                pesan.className = "";
+                return;
+            }
+
+            // Hitung total jam
+            const [h1, m1] = mulai.split(':').map(Number);
+            const [h2, m2] = selesai.split(':').map(Number);
+            let totalMenit = (h2 * 60 + m2) - (h1 * 60 + m1);
+            if (totalMenit < 0) totalMenit += 24 * 60;
+            const totalJam = (totalMenit / 60).toFixed(2);
+
+            // Ambil data dari localStorage
+            const key = `lembur_${user}`;
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+
+            // Tambahkan data baru
+            data.push({
+                tanggal,
+                jamMulai: mulai,
+                jamSelesai: selesai,
+                totalJam,
+                totalProject: totalProjectVal,
+                totalPlant: totalPlantVal,
+                volume,
+                uraianTugas: uraian,
+                plant: plantValues,
+                lastUpdate: now,
+                updatedBy: user
+            });
+
+            // Simpan kembali
+            localStorage.setItem(key, JSON.stringify(data));
+
+            pesan.textContent = "✅ Data lembur berhasil disimpan!";
+            pesan.className = "success";
+            tampilkanData();
+
+            // Reset form
+            jamMulai.value = "";
+            jamSelesai.value = "";
+            volumeInput.value = "";
+            uraianTugas.value = "";
+            generatePlantDropdowns();
+        }
+
+        // Tampilkan Data Lembur
+        function tampilkanData() {
+            const user = localStorage.getItem('loggedInUser');
+            const filter = filterBulan.value;
+
+            const key = `lembur_${user}`;
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+
+            if (filter) {
+                data = data.filter(item => item.tanggal.startsWith(filter));
+            }
+
+            bodyTabel.innerHTML = "";
+            let total = 0;
+
+            // Sort by date descending
+            data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                const plantText = item.plant ? item.plant.join(', ') : '-';
+                const volumeText = item.volume || '-';
+                const lastUpdateText = item.lastUpdate || '-';
+
+                tr.innerHTML = `
+                    <td>${item.tanggal}</td>
+                    <td>${item.jamMulai}</td>
+                    <td>${item.jamSelesai}</td>
+                    <td>${item.totalJam} jam</td>
+                    <td>${plantText}</td>
+                    <td>${volumeText}</td>
+                    <td>${item.uraianTugas || '-'}</td>
+                    <td>${lastUpdateText}</td>
+                `;
+                bodyTabel.appendChild(tr);
+                total += parseFloat(item.totalJam);
+            });
+
+            totalJamSpan.textContent = total.toFixed(2);
+        }
+
+        // Load Summary Data (Admin Only)
+        function loadSummaryData() {
+            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+            const summaryData = [];
+            let labels = [];
+            let dataValues = [];
+
+            bodySummary.innerHTML = "";
+
+            picList.forEach(pic => {
+                const key = `lembur_${pic}`;
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                const totalJam = data.reduce((sum, item) => sum + parseFloat(item.totalJam || 0), 0);
+                const lastUpdate = data.length > 0 ? data[0].lastUpdate : '-';
+                
+                summaryData.push({
+                    nama: pic,
+                    totalJam: totalJam.toFixed(2),
+                    totalEntry: data.length,
+                    lastUpdate: lastUpdate
+                });
+
+                labels.push(pic);
+                dataValues.push(parseFloat(totalJam.toFixed(2)));
+            });
+
+            // Render table
+            summaryData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.nama}</td>
+                    <td>${item.totalJam} jam</td>
+                    <td>${item.totalEntry}</td>
+                    <td>${item.lastUpdate}</td>
+                `;
+                bodySummary.appendChild(tr);
+            });
+
+            // Render Chart
+            renderSummaryChart(labels, dataValues);
+        }
+
+        // Render Chart
+        function renderSummaryChart(labels, data) {
+            const ctx = document.getElementById('summaryChart').getContext('2d');
+            
+            if (summaryChart) {
+                summaryChart.destroy();
+            }
+
+            summaryChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Jam Lembur',
+                        data: data,
+                        backgroundColor: [
+                            '#3498db', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6'
+                        ],
+                        borderColor: [
+                            '#2980b9', '#27ae60', '#f39c12', '#c0392b', '#8e44ad'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Total Jam Lembur'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load PIC List for Setting
+        function loadPICList() {
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            const picList = Object.keys(users).filter(name => name !== 'admin');
+
+            // Populate edit dropdown
+            editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
+            deletePicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
+
+            picList.forEach(name => {
+                editPicName.innerHTML += `<option value="${name}">${name}</option>`;
+                deletePicName.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+
+        // Tambah PIC Baru
+        function tambahPIC() {
+            const name = newPicName.value.trim();
+            const pass = newPicPass.value.trim();
+
+            if (!name || !pass) {
+                settingPesan.textContent = "Nama dan password harus diisi!";
+                settingPesan.style.color = "red";
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            if (users[name]) {
+                settingPesan.textContent = "Nama PIC sudah ada!";
+                settingPesan.style.color = "red";
+                return;
+            }
+
+            users[name] = pass;
+            localStorage.setItem('app_users', JSON.stringify(users));
+            
+            settingPesan.textContent = `✅ PIC "${name}" berhasil ditambahkan!`;
+            settingPesan.style.color = "green";
+            
+            // Reset form
+            newPicName.value = "";
+            newPicPass.value = "";
+            
+            // Refresh PIC list
+            loadPICList();
+        }
+
+        // Edit Password PIC
+        function editPasswordPIC() {
+            const name = editPicName.value;
+            const pass = editPicPass.value.trim();
+
+            if (!name || !pass) {
+                settingPesan.textContent = "Pilih PIC dan isi password baru!";
+                settingPesan.style.color = "red";
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            users[name] = pass;
+            localStorage.setItem('app_users', JSON.stringify(users));
+            
+            settingPesan.textContent = `✅ Password untuk "${name}" berhasil diubah!`;
+            settingPesan.style.color = "green";
+            
+            // Reset form
+            editPicPass.value = "";
+        }
+
+        // Hapus PIC
+        function hapusPIC() {
+            const name = deletePicName.value;
+
+            if (!name) {
+                settingPesan.textContent = "Pilih PIC yang akan dihapus!";
+                settingPesan.style.color = "red";
+                return;
+            }
+
+            if (!confirm(`Yakin ingin menghapus PIC "${name}"? Semua data lemburnya juga akan terhapus!`)) {
+                return;
+            }
+
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            delete users[name];
+            localStorage.setItem('app_users', JSON.stringify(users));
+            
+            // Hapus data lembur
+            localStorage.removeItem(`lembur_${name}`);
+            
+            settingPesan.textContent = `✅ PIC "${name}" dan semua datanya berhasil dihapus!`;
+            settingPesan.style.color = "green";
+            
+            // Refresh PIC list
+            loadPICList();
+        }
+
+        // ============= BACKUP & RESTORE FUNCTIONS =============
+        function backupData() {
+            try {
+                const backupData = {
+                    timestamp: new Date().toISOString(),
+                    app_users: JSON.parse(localStorage.getItem('app_users') || '{}'),
+                    lembur_data: {}
+                };
+
+                // Backup semua data lembur
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('lembur_')) {
+                        backupData.lembur_data[key] = JSON.parse(localStorage.getItem(key));
+                    }
+                }
+
+                // Convert to JSON string
+                const dataStr = JSON.stringify(backupData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+
+                // Create download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_lembur_${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                backupRestorePesan.textContent = "✅ Backup berhasil! File telah didownload.";
+                backupRestorePesan.style.color = "green";
+            } catch (error) {
+                backupRestorePesan.textContent = "❌ Gagal backup: " + error.message;
+                backupRestorePesan.style.color = "red";
+            }
+        }
+
+        function restoreData() {
+            const file = fileRestore.files[0];
+            if (!file) {
+                backupRestorePesan.textContent = "❌ Pilih file backup terlebih dahulu!";
+                backupRestorePesan.style.color = "red";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+
+                    // Konfirmasi
+                    if (!confirm(`⚠️ Anda akan me-restore SEMUA data!\n\nBackup dibuat pada: ${backupData.timestamp}\n\nLanjutkan?`)) {
+                        return;
+                    }
+
+                    // Restore users
+                    localStorage.setItem('app_users', JSON.stringify(backupData.app_users));
+
+                    // Hapus semua data lembur yang ada
+                    for (let i = localStorage.length - 1; i >= 0; i--) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith('lembur_')) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+
+                    // Restore semua data lembur
+                    for (const key in backupData.lembur_data) {
+                        localStorage.setItem(key, JSON.stringify(backupData.lembur_data[key]));
+                    }
+
+                    backupRestorePesan.textContent = "✅ Restore berhasil! Refresh halaman untuk melihat perubahan.";
+                    backupRestorePesan.style.color = "green";
+
+                    // Auto refresh setelah 2 detik
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+
+                } catch (error) {
+                    backupRestorePesan.textContent = "❌ Gagal restore: " + error.message;
+                    backupRestorePesan.style.color = "red";
+                }
+            };
+            reader.readAsText(file);
+        }
+        // ===================================================
+
+        // Export to Excel
+        function exportToExcel() {
+            const user = localStorage.getItem('loggedInUser');
+            const data = JSON.parse(localStorage.getItem(`lembur_${user}`) || '[]');
+            
+            if (data.length === 0) {
+                alert("Tidak ada data untuk di-export!");
+                return;
+            }
+
+            // Prepare data for Excel
+            const ws_data = [
+                ["Tanggal", "Jam Mulai", "Jam Selesai", "Total Jam", "Total Project", "Total Plant", "Plant", "Volume (m³)", "Uraian Tugas", "Last Update", "Updated By"]
+            ];
+
+            data.forEach(item => {
+                ws_data.push([
+                    item.tanggal,
+                    item.jamMulai,
+                    item.jamSelesai,
+                    item.totalJam,
+                    item.totalProject,
+                    item.totalPlant,
+                    item.plant ? item.plant.join(', ') : '',
+                    item.volume || '',
+                    item.uraianTugas || '',
+                    item.lastUpdate || '',
+                    item.updatedBy || ''
+                ]);
+            });
+
+            // Create worksheet and workbook
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Rekap Lembur");
+
+            // Export
+            XLSX.writeFile(wb, `Rekap_Lembur_${user}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // Export Summary to Excel
+        function exportSummaryToExcel() {
+            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+            const summaryData = [];
+
+            picList.forEach(pic => {
+                const key = `lembur_${pic}`;
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                const totalJam = data.reduce((sum, item) => sum + parseFloat(item.totalJam || 0), 0);
+                const lastUpdate = data.length > 0 ? data[0].lastUpdate : '-';
+                
+                summaryData.push({
+                    nama: pic,
+                    totalJam: totalJam.toFixed(2),
+                    totalEntry: data.length,
+                    lastUpdate: lastUpdate
+                });
+            });
+
+            // Prepare data for Excel
+            const ws_data = [
+                ["Nama PIC", "Total Jam Lembur", "Total Entry", "Last Update"]
+            ];
+
+            summaryData.forEach(item => {
+                ws_data.push([
+                    item.nama,
+                    item.totalJam,
+                    item.totalEntry,
+                    item.lastUpdate
+                ]);
+            });
+
+            // Create worksheet and workbook
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Summary Lembur");
+
+            // Export
+            XLSX.writeFile(wb, `Summary_Lembur_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        // Cek login saat halaman dibuka
+        window.addEventListener('DOMContentLoaded', () => {
+            initUsers();
+            tampilkanAplikasi();
+        });
+    </script>
+</body>
+</html>
