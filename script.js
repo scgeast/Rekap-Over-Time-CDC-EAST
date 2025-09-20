@@ -266,6 +266,29 @@ function restoreFromJSON(jsonData) {
   });
   showToast("Data berhasil dipulihkan", "success");
 }
+function handleLogin() {
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+  const role = loginUser(u, p);
+  if (role) {
+    showAppFor(u);
+    showToast("Login berhasil", "success");
+  } else {
+    showToast("Login gagal", "error");
+  }
+}
+function handleRestore(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const json = JSON.parse(reader.result);
+      restoreFromJSON(json);
+    } catch (e) {
+      showToast("Format JSON tidak valid", "error");
+    }
+  };
+  reader.readAsText(file);
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   initUserStore();
