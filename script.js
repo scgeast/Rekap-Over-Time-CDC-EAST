@@ -1,3 +1,6 @@
+if (!localStorage.getItem("logged_in_user")) {
+  document.getElementById("sidebar").classList.add("hidden");
+}
 const SIDEBAR = document.getElementById("sidebar");
 const TOGGLE_BTN = document.getElementById("toggle-btn");
 const LOGIN_BOX = document.getElementById("login-box");
