@@ -830,11 +830,14 @@ function exportMasterOutputToExcel(){
 document.addEventListener('DOMContentLoaded', ()=>{
   initUsers();
   // hide sidebar initially (before login)
-sidebar.classList.add('hidden');
-// JANGAN sembunyikan toggle button, biarkan selalu terlihat
-// toggleBtn.classList.add('hidden');
+  sidebar.classList.add('hidden');
+
+  // Hapus status login saat halaman dimuat agar selalu ke login screen
+  localStorage.removeItem('loggedInUser');
+
   // generate initial plant selects
   generatePlantDropdowns();
+
   // event bindings
   btnLogin.addEventListener('click', login);
   btnLogout.addEventListener('click', logout);
@@ -847,22 +850,26 @@ sidebar.classList.add('hidden');
   btnMasterSummaryFilter.addEventListener('click', tampilkanMasterSummary);
   btnAddPic.addEventListener('click', tambahPIC);
   btnEditPic.addEventListener('click', editPasswordPIC);
+
   // totalPlant change -> regenerate plant inputs
   totalPlant.addEventListener('input', generatePlantDropdowns);
+
   // sidebar toggle logic: collapse / expand, and reposition toggle
   toggleBtn.addEventListener('click', ()=>{
     sidebar.classList.toggle('collapsed');
     // reposition button so it remains visible after collapse
     setTimeout(positionToggleButton, 50);
   });
+
   // initial position of toggle (even hidden) so when shown it's at right place
   setTimeout(positionToggleButton, 100);
-  // sidebar menu navigation
-  document.querySelectorAll('.sidebar-menu > li').forEach(item => {
+
+  // sidebar menu navigation - DIPERBAIKI UNTUK HANDLE FOLDER & SUBMENU
+  document.querySelectorAll('.sidebar-menu li').forEach(item => {
     item.addEventListener('click', (e) => {
       // Cek apakah item ini adalah folder toggle
       if (item.classList.contains('folder-toggle')) {
-        e.stopPropagation(); // Mencegah event bubbling jika diperlukan
+        e.stopPropagation();
         const folderId = item.getAttribute('data-folder');
         const submenu = document.getElementById(folderId);
         const isCurrentlyOpen = !submenu.classList.contains('hidden');
@@ -896,6 +903,7 @@ sidebar.classList.add('hidden');
 
       // hide all tab contents
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+
       // show selected tab
       if (tab === 'rekap') {
         const user = localStorage.getItem('loggedInUser');
@@ -926,24 +934,24 @@ sidebar.classList.add('hidden');
       setTimeout(positionToggleButton, 50);
     });
   });
+
   // modal events
   editCancel.addEventListener('click', (e)=>{ e.preventDefault(); closeEditModal(); });
   editModal.addEventListener('click', (e)=>{ if(e.target === editModal) closeEditModal(); });
   editSave.addEventListener('click', (e)=>{ e.preventDefault(); saveEditedData(); });
-  // Hapus status login sebelum memeriksanya (agar selalu diminta login)
-  localStorage.removeItem('loggedInUser');
-  // Cek apakah masih ada pengguna yang login (harusnya tidak)
+
+  // Cek apakah masih ada pengguna yang login (harusnya tidak, karena sudah dihapus di atas)
   if(localStorage.getItem('loggedInUser')) {
-    // Jika masih ada (misalnya karena sesuatu yang tidak normal), panggil showAppAfterLogin
     showAppAfterLogin();
-} else {
-    // Jika tidak ada, pastikan sidebar disembunyikan dan login section ditampilkan
-    sidebar.classList.add('hidden');
+  } else {
+    // Pastikan login section ditampilkan
     loginSection.classList.remove('hidden');
-}
+  }
+
   // reposition toggle on window resize
   window.addEventListener('resize', ()=> setTimeout(positionToggleButton, 80));
 });
+
 /* Expose some functions to global for inline onclick handlers */
 window.editDataAdmin = editDataAdmin;
 window.deleteDataAdmin = deleteDataAdmin;
