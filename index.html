@@ -1,64 +1,1007 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Aplikasi Rekap Lembur</title>
-  <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Rekap Over Time CDC EAST - Final</title>
+
+<!-- Dependencies -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root{
+    --primary:#3498db; --danger:#e74c3c; --success:#27ae60;
+    --sidebar:#2c3e50; --text:#333; --bg:#f4f6f9;
+    --sidebar-width:250px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background:var(--bg); color:var(--text); display:flex; min-height:100vh;
+  }
+
+  /* Sidebar */
+  #sidebar {
+    width: var(--sidebar-width);
+    background:var(--sidebar);
+    color:#fff;
+    padding:20px 12px;
+    display:flex;
+    flex-direction:column;
+    transition: width .25s ease, padding .25s ease;
+    position:relative;
+    z-index:1000;
+  }
+  #sidebar.collapsed{
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  .sidebar-header{ padding:0 12px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .sidebar-header h3{ font-size:1.05rem; display:flex; align-items:center; gap:8px; margin:0; }
+  .sidebar-menu{ list-style:none; padding:8px 0; margin-top:8px; }
+  .sidebar-menu li{ padding:10px 14px; cursor:pointer; border-radius:6px; display:flex; gap:8px; align-items:center; }
+  .sidebar-menu li.active, .sidebar-menu li:hover{ background:rgba(255,255,255,0.06); }
+
+  /* Toggle button (positioned to the right edge of sidebar) */
+  #toggle-sidebar {
+    position: absolute;
+    top: 12px;
+    /* left will be updated by JS so button appears at right edge of sidebar */
+    z-index: 1100;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:8px 10px;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,0.12);
+  }
+
+  /* Main content */
+  .main-content{ flex:1; padding:22px; overflow-y:auto; }
+  .container{ max-width:1200px; margin:0 auto; background:#fff; padding:26px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+  h1,h2,h3{ color:#2c3e50; margin-bottom:14px; }
+  label{ display:block; margin-bottom:6px; font-weight:600; font-size:0.95rem; }
+  input,select,textarea,button{ width:100%; padding:10px; border:1px solid #d0d6dc; border-radius:8px; margin-bottom:8px; }
+  button{ background:var(--primary); color:white; font-weight:700; cursor:pointer; border:none; }
+  button:hover{ background:#2c82c8; }
+
+  .row{ display:flex; gap:12px; margin-bottom:12px; align-items:flex-start; }
+  .col{ flex:1; }
+  .col-shrink{ flex:0 0 auto; }
+
+  table{ width:100%; border-collapse:collapse; margin-top:12px; }
+  th,td{ padding:10px; border-bottom:1px solid #eee; text-align:left; vertical-align:middle; }
+  th{ background:#f6f9fc; font-weight:700; }
+
+  /* LOGIN BOX - centered and smaller */
+  #login-section{
+    max-width:420px;
+    margin:70px auto;
+    padding:24px;
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.06);
+  }
+  #login-section .form-group label{ font-size:0.8em; } /* login label lebih kecil */
+  #login-section h1{ text-align:center; margin-bottom:16px; }
+
+  .hidden{ display:none !important; }
+  .success{ color:var(--success); font-weight:700; }
+
+  /* header-flex for title + total jam */
+  .header-flex{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; }
+  #total-jam-lembur{ background:#eef6ff; padding:8px 12px; border-radius:8px; font-weight:700; color:#15395b; }
+
+  /* plant inline container */
+  #plant-dropdowns-inline{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+  /* modal */
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; }
+  .modal-backdrop.show{ display:flex; }
+  .modal{ background:#fff; padding:18px; border-radius:10px; width:720px; max-width:95%; box-shadow:0 12px 30px rgba(0,0,0,0.2); }
+  .modal h3{ margin-bottom:10px; }
+
+  /* responsive */
+  @media (max-width:900px){
+    .row{ flex-direction:column; }
+    #sidebar{ position:fixed; height:100vh; left:0; top:0; z-index:1000; }
+    #toggle-sidebar{ top:10px; }
+    #login-section{ margin:40px 16px; }
+  }
+</style>
 </head>
 <body>
-  <!-- Sidebar -->
-  <aside id="sidebar" class="hidden">
-    <div class="sidebar-header">
-      <h3>Menu</h3>
-      <button class="ghost" onclick="logoutUser()">Logout</button>
-    </div>
-    <ul class="sidebar-menu">
-      <li onclick="showAppFor(localStorage.getItem('logged_in_user'))">🏠 Dashboard</li>
+
+<!-- Sidebar -->
+<div id="sidebar" class="">
+  <div class="sidebar-header">
+    <h3>📂 Menu</h3>
+    <!-- Toggle placed inside header so its vertical position is aligned; JS will move it horizontally -->
+    <button id="toggle-sidebar" aria-label="Toggle sidebar">☰</button>
+  </div>
+
+  <ul class="sidebar-menu">
+    <li data-tab="rekap" class="active"><span>📋</span>&nbsp;<span>Rekap Over Time</span></li>
+    <li data-tab="master" class="admin-only"><span>📁</span>&nbsp;<span>Master</span></li>
+    <ul class="submenu admin-only" style="list-style:none;padding-left:14px;margin-top:8px;">
+      <li data-tab="master-output">→ Output Rekapan</li>
+      <li data-tab="master-summary">→ Summary Over Time CDC</li>
+      <li data-tab="master-setting">→ Setting</li>
     </ul>
-  </aside>
+  </ul>
 
-  <!-- Toggle Sidebar Button -->
-  <button id="toggle-btn" class="toggle-btn">
-    <span></span><span></span><span></span>
-  </button>
+  <div style="margin-top:auto;padding:12px;">
+    <div style="margin-bottom:8px;"><strong>User:</strong> <span id="nama-user"></span></div>
+    <button id="btn-logout" class="logout-btn" style="background:var(--danger);">Logout</button>
+  </div>
+</div>
 
-  <!-- Main Content -->
-  <main class="main">
-    <div class="container" id="app-container">
+<!-- Main -->
+<div class="main-content">
+  <div class="container">
 
-      <!-- Login Box -->
-      <section id="login-box">
-        <h2>Login</h2>
-        <div class="form-group">
-          <label class="small">Username</label>
-          <input type="text" id="username" />
-        </div>
-        <div class="form-group">
-          <label class="small">Password</label>
-          <input type="password" id="password" />
-        </div>
-        <button class="primary" onclick="handleLogin()">Login</button>
-      </section>
+    <!-- LOGIN -->
+    <div id="login-section">
+      <h1>🔐 Rekap Over Time CDC EAST</h1>
+      <div class="form-group">
+        <label for="username">Nama PIC / Admin:</label>
+        <select id="username">
+          <option value="">-- Pilih Nama --</option>
+          <option value="Agung Setyawan">Agung Setyawan</option>
+          <option value="Fahmi Ardiansyah">Fahmi Ardiansyah</option>
+          <option value="Drajat Triono">Drajat Triono</option>
+          <option value="Wiyanto">Wiyanto</option>
+          <option value="Nur Fauziah">Nur Fauziah</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
 
-      <!-- App Placeholder -->
-      <section id="app-placeholder" class="hidden">
-        <div class="header-flex">
-          <h2 id="page-title">📝 Input & Rekap Lembur - <span id="page-user">Nama</span></h2>
-          <div id="total-jam">Total Jam: 0</div>
-        </div>
-        <div id="content-area"></div>
-      </section>
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input id="password" type="password" placeholder="Masukkan password" />
+      </div>
 
+      <button id="btn-login">Login</button>
+      <p id="login-error" style="color:#c0392b;margin-top:8px;"></p>
     </div>
-  </main>
 
-  <!-- Toast Notification -->
-  <div id="toast" class="toast"></div>
+    <!-- TAB: PIC -->
+    <div id="tab-rekap-pic" class="tab-content hidden">
+      <div class="header-flex">
+        <h1>📝 Input & Rekap Lembur - <span id="nama-user-title"></span></h1>
+        <div id="total-jam-lembur">Total Jam: 0</div>
+      </div>
 
-  <!-- Script -->
-  <script src="script.js"></script>
+      <h2>Input Lembur Hari Ini</h2>
+      <div class="row">
+        <div class="col">
+          <label for="tanggal">Tanggal</label>
+          <input id="tanggal" type="date" />
+        </div>
+        <div class="col">
+          <label for="jam-mulai">Jam Mulai</label>
+          <input id="jam-mulai" type="time" />
+        </div>
+        <div class="col">
+          <label for="jam-selesai">Jam Selesai</label>
+          <input id="jam-selesai" type="time" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col" style="flex:0 0 150px;">
+          <label for="total-project">Total Project</label>
+          <input id="total-project" type="number" min="1" max="5" value="1" />
+        </div>
+        <div class="col" style="flex:0 0 150px;">
+          <label for="total-plant">Total Plant</label>
+          <input id="total-plant" type="number" min="1" max="5" value="1" />
+        </div>
+        <div class="col" style="flex:0 0 260px;">
+          <label>Plant Name</label>
+          <div id="plant-dropdowns-inline"></div>
+        </div>
+        <div class="col" style="flex:0 0 130px;">
+          <label for="volume">Volume (m³)</label>
+          <input id="volume" type="number" step="0.1" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="uraian-tugas">Uraian Tugas</label>
+        <textarea id="uraian-tugas" rows="3" placeholder="Deskripsikan tugas lembur..."></textarea>
+      </div>
+
+      <button id="btn-simpan">Save</button>
+      <p id="pesan" style="margin-top:8px;"></p>
+
+      <h2 style="margin-top:18px;">Output Rekapan</h2>
+
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;">
+        <button id="btn-export" style="padding:8px 12px;">📊 Export Excel</button>
+      </div>
+
+      <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
+        <div class="col">
+          <label for="filter-start-date">Start Date</label>
+          <input id="filter-start-date" type="date" />
+        </div>
+        <div class="col">
+          <label for="filter-end-date">End Date</label>
+          <input id="filter-end-date" type="date" />
+        </div>
+        <div class="col-shrink" style="align-self:flex-end;">
+          <button id="btn-filter" style="width:auto;padding:10px 14px;">Terapkan Filter</button>
+        </div>
+      </div>
+
+      <table id="tabel-lembur-pic">
+        <thead>
+          <tr><th>Tanggal</th><th>Jam Mulai</th><th>Jam Selesai</th><th>Total Jam</th><th>Plant</th><th>Volume</th><th>Uraian</th><th>Last Update</th></tr>
+        </thead>
+        <tbody id="body-tabel-pic"></tbody>
+      </table>
+    </div>
+
+    <!-- TAB: ADMIN -->
+    <div id="tab-rekap-admin" class="tab-content admin-only hidden">
+      <h1>📊 Monitoring Rekap Lembur (Admin)</h1>
+
+      <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
+        <div class="col">
+          <label for="admin-filter-pic">Nama PIC</label>
+          <select id="admin-filter-pic"><option value="all">Select All</option></select>
+        </div>
+        <div class="col">
+          <label for="admin-filter-start-date">Start Date</label>
+          <input id="admin-filter-start-date" type="date" />
+        </div>
+        <div class="col">
+          <label for="admin-filter-end-date">End Date</label>
+          <input id="admin-filter-end-date" type="date" />
+        </div>
+        <div class="col-shrink" style="align-self:flex-end;">
+          <button id="btn-admin-filter" style="width:auto;padding:10px 14px;">Terapkan Filter</button>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>PIC</th><th>Tanggal</th><th>Jam Mulai</th><th>Jam Selesai</th><th>Total Jam</th><th>Plant</th><th>Volume</th><th>Uraian</th><th>Last Update</th><th>Aksi</th></tr>
+        </thead>
+        <tbody id="body-tabel-admin"></tbody>
+      </table>
+    </div>
+
+    <!-- MASTER OUTPUT -->
+    <div id="tab-master-output" class="tab-content admin-only hidden">
+      <h1>📁 Master → Output Rekapan</h1>
+
+      <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
+        <div class="col">
+          <label for="master-output-pic">Nama PIC</label>
+          <select id="master-output-pic"><option value="all">Select All</option></select>
+        </div>
+        <div class="col">
+          <label for="master-output-start-date">Start Date</label>
+          <input id="master-output-start-date" type="date" />
+        </div>
+        <div class="col">
+          <label for="master-output-end-date">End Date</label>
+          <input id="master-output-end-date" type="date" />
+        </div>
+        <div class="col-shrink" style="align-self:flex-end;">
+          <button id="btn-master-output-filter" style="width:auto;padding:10px 14px;">Terapkan Filter</button>
+          <button id="btn-master-output-export" style="width:auto;padding:8px 12px;margin-left:8px;">📊 Export Excel</button>
+        </div>
+      </div>
+
+      <table id="tabel-master-output">
+        <thead><tr><th>PIC</th><th>Tanggal</th><th>Jam Mulai</th><th>Jam Selesai</th><th>Total Jam</th><th>Plant</th><th>Volume</th><th>Uraian</th><th>Last Update</th></tr></thead>
+        <tbody id="body-master-output"></tbody>
+      </table>
+    </div>
+
+    <!-- MASTER SUMMARY -->
+    <div id="tab-master-summary" class="tab-content admin-only hidden">
+      <h1>📁 Master → Summary Over Time CDC</h1>
+
+      <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
+        <div class="col">
+          <label for="master-summary-pic">Nama PIC</label>
+          <select id="master-summary-pic"><option value="all">Select All</option></select>
+        </div>
+        <div class="col">
+          <label for="master-summary-start-date">Start Date</label>
+          <input id="master-summary-start-date" type="date" />
+        </div>
+        <div class="col">
+          <label for="master-summary-end-date">End Date</label>
+          <input id="master-summary-end-date" type="date" />
+        </div>
+        <div class="col-shrink" style="align-self:flex-end;">
+          <button id="btn-master-summary-filter" style="width:auto;padding:10px 14px;">Terapkan Filter</button>
+        </div>
+      </div>
+
+      <div style="padding:12px;background:#fafcff;border-radius:10px;margin-bottom:12px;">
+        <canvas id="masterSummaryChart" style="max-height:320px;"></canvas>
+      </div>
+
+      <table>
+        <thead><tr><th>PIC</th><th>Total Jam Lembur</th><th>Total Entry</th><th>Rata-rata Jam/Hari</th><th>Last Update</th></tr></thead>
+        <tbody id="body-master-summary"></tbody>
+      </table>
+    </div>
+
+    <!-- MASTER SETTING -->
+    <div id="tab-master-setting" class="tab-content admin-only hidden">
+      <h1>📁 Master → Setting</h1>
+
+      <h3>➕ Tambah PIC Baru</h3>
+      <div class="row">
+        <div class="col"><label for="new-pic-name">Nama PIC Baru</label><input id="new-pic-name" /></div>
+        <div class="col"><label for="new-pic-pass">Password</label><input id="new-pic-pass" /></div>
+        <div class="col-shrink" style="align-self:flex-end;"><button id="btn-add-pic" style="width:auto;padding:10px 14px;">➕ Tambah PIC</button></div>
+      </div>
+
+      <h3>🔑 Ganti Password PIC</h3>
+      <div class="row">
+        <div class="col">
+          <label for="edit-pic-name">Pilih PIC</label>
+          <select id="edit-pic-name"><option value="">-- Pilih PIC --</option></select>
+        </div>
+        <div class="col">
+          <label for="edit-pic-pass">Password Baru</label>
+          <input id="edit-pic-pass" />
+        </div>
+        <div class="col-shrink" style="align-self:flex-end;"><button id="btn-edit-pic" style="width:auto;padding:10px 14px;">🔄 Update Password</button></div>
+      </div>
+
+      <h3>🔐 Daftar Password Semua PIC</h3>
+      <table class="password-table">
+        <thead><tr><th>Nama PIC</th><th>Password</th><th>Akses</th></tr></thead>
+        <tbody id="password-list-body"></tbody>
+      </table>
+
+      <div id="setting-pesan" style="margin-top:12px;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="edit-modal" class="modal-backdrop" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+    <h3 id="edit-modal-title">Edit Data Lembur</h3>
+
+    <div style="display:flex;gap:10px;margin-bottom:8px;">
+      <div style="flex:1;"><label>Tanggal</label><input id="edit-tanggal" type="date" /></div>
+      <div style="flex:1;"><label>Jam Mulai</label><input id="edit-jam-mulai" type="time" /></div>
+      <div style="flex:1;"><label>Jam Selesai</label><input id="edit-jam-selesai" type="time" /></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:8px;">
+      <div style="flex:1;"><label>Plant (pisah koma)</label><input id="edit-plant" placeholder="Denpasar2, Gianyar" /></div>
+      <div style="width:140px;"><label>Volume (m³)</label><input id="edit-volume" type="number" step="0.1" /></div>
+    </div>
+
+    <div style="margin-bottom:8px;"><label>Uraian Tugas</label><textarea id="edit-uraian" rows="3"></textarea></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;">
+      <button id="edit-cancel">Batal</button>
+      <button id="edit-save" style="background:var(--success);">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =======================
+   Data & DOM references
+   ======================= */
+const DEFAULT_USERS = {
+  "Agung Setyawan":"12345",
+  "Fahmi Ardiansyah":"67890",
+  "Drajat Triono":"45678",
+  "Wiyanto":"23456",
+  "Nur Fauziah":"54321",
+  "admin":"123456789"
+};
+const plantOptions = ["Denpasar2","Gianyar","Manyar","Manukan","Kediri","Gempol","Krian"];
+
+/* DOM */
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('toggle-sidebar');
+const loginSection = document.getElementById('login-section');
+const namaUserSpan = document.getElementById('nama-user');
+const namaUserTitle = document.getElementById('nama-user-title');
+
+const usernameSelect = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const btnLogin = document.getElementById('btn-login');
+const btnLogout = document.getElementById('btn-logout');
+
+const tabRekapPic = document.getElementById('tab-rekap-pic');
+const tabRekapAdmin = document.getElementById('tab-rekap-admin');
+const tabMasterOutput = document.getElementById('tab-master-output');
+const tabMasterSummary = document.getElementById('tab-master-summary');
+const tabMasterSetting = document.getElementById('tab-master-setting');
+
+const tanggalInput = document.getElementById('tanggal');
+const jamMulai = document.getElementById('jam-mulai');
+const jamSelesai = document.getElementById('jam-selesai');
+const totalProject = document.getElementById('total-project');
+const totalPlant = document.getElementById('total-plant');
+const plantDropdownsInline = document.getElementById('plant-dropdowns-inline');
+const volumeInput = document.getElementById('volume');
+const uraianTugas = document.getElementById('uraian-tugas');
+const btnSimpan = document.getElementById('btn-simpan');
+const btnExport = document.getElementById('btn-export');
+const pesan = document.getElementById('pesan');
+const filterStartDate = document.getElementById('filter-start-date');
+const filterEndDate = document.getElementById('filter-end-date');
+const btnFilter = document.getElementById('btn-filter');
+
+const bodyTabelPic = document.getElementById('body-tabel-pic');
+const totalJamLabel = document.getElementById('total-jam-lembur');
+
+const adminFilterPic = document.getElementById('admin-filter-pic');
+const adminFilterStartDate = document.getElementById('admin-filter-start-date');
+const adminFilterEndDate = document.getElementById('admin-filter-end-date');
+const btnAdminFilter = document.getElementById('btn-admin-filter');
+const bodyTabelAdmin = document.getElementById('body-tabel-admin');
+
+const masterOutputPic = document.getElementById('master-output-pic');
+const masterOutputStartDate = document.getElementById('master-output-start-date');
+const masterOutputEndDate = document.getElementById('master-output-end-date');
+const btnMasterOutputFilter = document.getElementById('btn-master-output-filter');
+const btnMasterOutputExport = document.getElementById('btn-master-output-export');
+const bodyMasterOutput = document.getElementById('body-master-output');
+
+const masterSummaryPic = document.getElementById('master-summary-pic');
+const masterSummaryStartDate = document.getElementById('master-summary-start-date');
+const masterSummaryEndDate = document.getElementById('master-summary-end-date');
+const btnMasterSummaryFilter = document.getElementById('btn-master-summary-filter');
+const bodyMasterSummary = document.getElementById('body-master-summary');
+
+const newPicName = document.getElementById('new-pic-name');
+const newPicPass = document.getElementById('new-pic-pass');
+const btnAddPic = document.getElementById('btn-add-pic');
+const editPicName = document.getElementById('edit-pic-name');
+const editPicPass = document.getElementById('edit-pic-pass');
+const btnEditPic = document.getElementById('btn-edit-pic');
+const passwordListBody = document.getElementById('password-list-body');
+const settingPesan = document.getElementById('setting-pesan');
+
+const editModal = document.getElementById('edit-modal');
+const editTanggal = document.getElementById('edit-tanggal');
+const editJamMulai = document.getElementById('edit-jam-mulai');
+const editJamSelesai = document.getElementById('edit-jam-selesai');
+const editPlant = document.getElementById('edit-plant');
+const editVolume = document.getElementById('edit-volume');
+const editUraian = document.getElementById('edit-uraian');
+const editCancel = document.getElementById('edit-cancel');
+const editSave = document.getElementById('edit-save');
+
+let masterSummaryChart = null;
+let editingContext = null; // {id, pic}
+
+/* ========== Helpers ========== */
+function initUsers(){ if(!localStorage.getItem('app_users')) localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS)); }
+
+/* generate plant selects according to totalPlant */
+function generatePlantDropdowns(){
+  plantDropdownsInline.innerHTML = '';
+  const count = Math.max(0, parseInt(totalPlant.value) || 0);
+  for(let i=1;i<=count;i++){
+    const s = document.createElement('select');
+    s.className = 'plant-select';
+    s.style.width = '140px';
+    s.innerHTML = `<option value="">Pilih</option>` + plantOptions.map(p=>`<option value="${p}">${p}</option>`).join('');
+    plantDropdownsInline.appendChild(s);
+  }
+}
+
+/* calculate total jam */
+function calcTotalJamFromTimes(mulai, selesai){
+  try{
+    const [h1,m1] = mulai.split(':').map(Number);
+    const [h2,m2] = selesai.split(':').map(Number);
+    let menit = (h2*60 + m2) - (h1*60 + m1);
+    if(isNaN(menit)) return 0;
+    if(menit < 0) menit += 24*60;
+    return (menit/60);
+  }catch(e){ return 0; }
+}
+
+/* position toggle button to appear at right edge of sidebar (and visible when collapsed) */
+function positionToggleButton(){
+  const sidebarRect = sidebar.getBoundingClientRect();
+  // When collapsed width may be 0; ensure toggle is still visible at left 8px
+  const left = Math.max(sidebarRect.left + sidebarRect.width - 36, 8);
+  toggleBtn.style.left = left + 'px';
+  // keep top aligned with header
+  const top = sidebarRect.top + 12;
+  toggleBtn.style.top = top + 'px';
+}
+
+/* ==========================
+   Login / Logout / UI show
+   ========================== */
+function login(){
+  const username = usernameSelect.value;
+  const password = passwordInput.value;
+  if(!username || !password){ document.getElementById('login-error').textContent = 'Isi username & password.'; return; }
+
+  const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+  if(!users[username] || users[username] !== password){
+    document.getElementById('login-error').textContent = 'Username atau password salah!';
+    return;
+  }
+
+  localStorage.setItem('loggedInUser', username);
+  localStorage.setItem('loginTime', new Date().toISOString());
+  showAppAfterLogin();
+}
+
+function logout(){
+  localStorage.removeItem('loggedInUser');
+  location.reload();
+}
+
+function showAppAfterLogin(){
+  const user = localStorage.getItem('loggedInUser');
+  if(!user) return;
+
+  // show sidebar and keep toggle visible
+  document.getElementById('sidebar').classList.remove('hidden');
+  toggleBtn.classList.remove('hidden');
+  // ensure sidebar not collapsed initially
+  sidebar.classList.remove('collapsed');
+
+  // update user display
+  namaUserSpan.textContent = user;
+  namaUserTitle.textContent = user;
+
+  // hide login and show appropriate tab
+  loginSection.classList.add('hidden');
+
+  // hide all tab contents first
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+
+  if(user === 'admin'){
+    document.querySelectorAll('.admin-only').forEach(e => e.style.display = 'block');
+    tabRekapAdmin.classList.remove('hidden');
+    tampilkanDataAdmin();
+    loadPICList();
+    tampilkanDaftarPassword();
+  } else {
+    document.querySelectorAll('.admin-only').forEach(e => e.style.display = 'none');
+    tabRekapPic.classList.remove('hidden');
+    generatePlantDropdowns();
+    // default tanggal = today
+    const today = new Date().toISOString().slice(0,10);
+    tanggalInput.value = today;
+    filterStartDate.value = new Date(new Date().setMonth(new Date().getMonth()-1)).toISOString().slice(0,10);
+    filterEndDate.value = today;
+    tampilkanDataPIC();
+  }
+
+  // default filter dates for masters
+  const today = new Date().toISOString().slice(0,10);
+  const oneMonthAgo = new Date(); oneMonthAgo.setMonth(oneMonthAgo.getMonth()-1);
+  const oneMonthAgoStr = oneMonthAgo.toISOString().slice(0,10);
+  adminFilterStartDate.value = oneMonthAgoStr; adminFilterEndDate.value = today;
+  masterOutputStartDate.value = oneMonthAgoStr; masterOutputEndDate.value = today;
+  masterSummaryStartDate.value = oneMonthAgoStr; masterSummaryEndDate.value = today;
+
+  // reposition toggle
+  setTimeout(positionToggleButton, 60);
+}
+
+/* ========== PIC (save/display/export) ========== */
+function simpanLembur(){
+  const user = localStorage.getItem('loggedInUser');
+  if(!user) { alert('Harus login dulu'); return; }
+
+  const tanggal = tanggalInput.value;
+  const mulai = jamMulai.value;
+  const selesai = jamSelesai.value;
+  const tp = parseInt(totalProject.value) || 1;
+  const tplant = parseInt(totalPlant.value) || 0;
+  const volume = volumeInput.value;
+  const uraian = uraianTugas.value;
+  const plantSel = Array.from(document.querySelectorAll('.plant-select')).map(s=>s.value).filter(Boolean);
+
+  if(!tanggal || !mulai || !selesai){
+    pesan.textContent = 'Tanggal & jam harus diisi!'; pesan.className=''; return;
+  }
+
+  if(plantSel.length < tplant && tplant > 0){
+    pesan.textContent = 'Isi semua Plant Name sesuai Total Plant.'; pesan.className=''; return;
+  }
+
+  const totalJam = calcTotalJamFromTimes(mulai, selesai).toFixed(2);
+  const now = new Date().toLocaleString('id-ID');
+
+  const key = `lembur_${user}`;
+  const data = JSON.parse(localStorage.getItem(key) || '[]');
+
+  data.push({
+    id: Date.now(),
+    tanggal,
+    jamMulai:mulai,
+    jamSelesai:selesai,
+    totalJam,
+    totalProject:tp,
+    totalPlant:tplant,
+    plant: plantSel,
+    volume,
+    uraianTugas:uraian,
+    lastUpdate: now,
+    updatedBy: user
+  });
+
+  localStorage.setItem(key, JSON.stringify(data));
+  pesan.textContent = '✅ Data berhasil disimpan.'; pesan.className='success';
+
+  // clear some fields
+  jamMulai.value=''; jamSelesai.value=''; volumeInput.value=''; uraianTugas.value='';
+  generatePlantDropdowns();
+  tampilkanDataPIC();
+}
+
+/* display PIC data */
+function tampilkanDataPIC(){
+  const user = localStorage.getItem('loggedInUser');
+  if(!user) return;
+  const start = filterStartDate.value;
+  const end = filterEndDate.value;
+  const key = `lembur_${user}`;
+  let data = JSON.parse(localStorage.getItem(key) || '[]');
+
+  if(start && end) data = data.filter(d => d.tanggal >= start && d.tanggal <= end);
+  data.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+
+  bodyTabelPic.innerHTML = '';
+  let totalJam=0;
+  data.forEach(it=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.tanggal}</td>
+      <td>${it.jamMulai}</td>
+      <td>${it.jamSelesai}</td>
+      <td>${parseFloat(it.totalJam).toFixed(2)} jam</td>
+      <td>${(it.plant && it.plant.join(', ')) || '-'}</td>
+      <td>${it.volume || '-'}</td>
+      <td>${it.uraianTugas || '-'}</td>
+      <td>${it.lastUpdate || '-'}</td>`;
+    bodyTabelPic.appendChild(tr);
+    totalJam += parseFloat(it.totalJam || 0);
+  });
+
+  totalJamLabel.textContent = `Total Jam: ${totalJam.toFixed(2)}`;
+}
+
+/* export PIC to Excel */
+function exportToExcel(){
+  const user = localStorage.getItem('loggedInUser');
+  if(!user) return alert('Login dulu');
+  const data = JSON.parse(localStorage.getItem(`lembur_${user}`) || '[]');
+  if(data.length === 0) return alert('Tidak ada data.');
+
+  const ws = [['Tanggal','Jam Mulai','Jam Selesai','Total Jam','Plant','Volume','Uraian','Last Update','Updated By']];
+  data.forEach(d=> ws.push([d.tanggal,d.jamMulai,d.jamSelesai,d.totalJam,(d.plant?d.plant.join(', '):''),d.volume||'',d.uraianTugas||'',d.lastUpdate||'',d.updatedBy||'']));
+  const sheet = XLSX.utils.aoa_to_sheet(ws);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,sheet,'Rekap');
+  XLSX.writeFile(wb, `Rekap_${user}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+/* ========== ADMIN (display/edit/delete) ========== */
+function tampilkanDataAdmin(){
+  const selected = adminFilterPic.value || 'all';
+  const start = adminFilterStartDate.value;
+  const end = adminFilterEndDate.value;
+  const users = Object.keys(JSON.parse(localStorage.getItem('app_users')||'{}')).filter(n=>n!=='admin');
+  const iterate = selected === 'all' ? users : [selected];
+
+  let all = [];
+  iterate.forEach(pic=>{
+    const data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
+    data.forEach(d=>{
+      const copy = Object.assign({}, d); copy.pic = pic; all.push(copy);
+    });
+  });
+
+  if(start && end) all = all.filter(d => d.tanggal >= start && d.tanggal <= end);
+  all.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+
+  bodyTabelAdmin.innerHTML = '';
+  all.forEach(it=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.pic}</td><td>${it.tanggal}</td><td>${it.jamMulai}</td><td>${it.jamSelesai}</td>
+      <td>${parseFloat(it.totalJam).toFixed(2)} jam</td><td>${(it.plant?it.plant.join(', '):'-')}</td><td>${it.volume||'-'}</td>
+      <td>${it.uraianTugas||'-'}</td><td>${it.lastUpdate||'-'}</td>
+      <td><button onclick="editDataAdmin(${it.id},'${it.pic}')">✏️</button> <button onclick="deleteDataAdmin(${it.id},'${it.pic}')">🗑️</button></td>`;
+    bodyTabelAdmin.appendChild(tr);
+  });
+}
+
+/* open edit modal */
+function editDataAdmin(id,pic){
+  const data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
+  const item = data.find(d=>d.id === id);
+  if(!item) return alert('Data tidak ditemukan.');
+  editingContext = { id, pic };
+  editTanggal.value = item.tanggal || '';
+  editJamMulai.value = item.jamMulai || '';
+  editJamSelesai.value = item.jamSelesai || '';
+  editPlant.value = (item.plant && item.plant.join(', ')) || '';
+  editVolume.value = item.volume || '';
+  editUraian.value = item.uraianTugas || '';
+  editModal.classList.add('show');
+  editModal.style.display = 'flex';
+}
+
+/* save edited data */
+function saveEditedData(){
+  if(!editingContext) return;
+  const { id, pic } = editingContext;
+  let data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
+  const idx = data.findIndex(d=>d.id===id);
+  if(idx === -1) return alert('Item tidak ditemukan saat menyimpan.');
+
+  // calculate totalJam if times given
+  const mulai = editJamMulai.value; const selesai = editJamSelesai.value;
+  let totalJam = data[idx].totalJam;
+  if(mulai && selesai) totalJam = calcTotalJamFromTimes(mulai, selesai).toFixed(2);
+
+  data[idx].tanggal = editTanggal.value || data[idx].tanggal;
+  data[idx].jamMulai = editJamMulai.value || data[idx].jamMulai;
+  data[idx].jamSelesai = editJamSelesai.value || data[idx].jamSelesai;
+  data[idx].totalJam = totalJam;
+  data[idx].plant = editPlant.value ? editPlant.value.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  data[idx].volume = editVolume.value || data[idx].volume;
+  data[idx].uraianTugas = editUraian.value || data[idx].uraianTugas;
+  data[idx].lastUpdate = new Date().toLocaleString('id-ID');
+  data[idx].updatedBy = localStorage.getItem('loggedInUser') || data[idx].updatedBy;
+
+  localStorage.setItem(`lembur_${pic}`, JSON.stringify(data));
+  closeEditModal();
+  tampilkanDataAdmin(); tampilkanMasterOutput(); tampilkanMasterSummary();
+  const current = localStorage.getItem('loggedInUser');
+  if(current && current === pic) tampilkanDataPIC();
+}
+
+/* close modal */
+function closeEditModal(){ editingContext=null; editModal.classList.remove('show'); editModal.style.display='none'; }
+
+/* delete data */
+function deleteDataAdmin(id,pic){
+  if(!confirm('Yakin mau hapus data ini?')) return;
+  let data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
+  data = data.filter(d=>d.id !== id);
+  localStorage.setItem(`lembur_${pic}`, JSON.stringify(data));
+  tampilkanDataAdmin(); tampilkanMasterOutput(); tampilkanMasterSummary();
+  const current = localStorage.getItem('loggedInUser');
+  if(current && current === pic) tampilkanDataPIC();
+}
+
+/* ========== MASTER OUTPUT / SUMMARY ========== */
+function tampilkanMasterOutput(){
+  const sel = masterOutputPic.value || 'all';
+  const start = masterOutputStartDate.value; const end = masterOutputEndDate.value;
+  const users = Object.keys(JSON.parse(localStorage.getItem('app_users')||'{}')).filter(n=>n!=='admin');
+  const pics = sel === 'all' ? users : [sel];
+
+  let all = [];
+  pics.forEach(pic=>{
+    const data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
+    data.forEach(d=>{ const copy = Object.assign({},d); copy.pic=pic; all.push(copy);});
+  });
+
+  if(start && end) all = all.filter(d=>d.tanggal >= start && d.tanggal <= end);
+  all.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+
+  bodyMasterOutput.innerHTML = '';
+  all.forEach(it=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${it.pic}</td><td>${it.tanggal}</td><td>${it.jamMulai}</td><td>${it.jamSelesai}</td>
+      <td>${parseFloat(it.totalJam).toFixed(2)} jam</td><td>${(it.plant?it.plant.join(', '):'-')}</td>
+      <td>${it.volume||'-'}</td><td>${it.uraianTugas||'-'}</td><td>${it.lastUpdate||'-'}</td>`;
+    bodyMasterOutput.appendChild(tr);
+  });
+}
+
+/* Master Summary */
+function tampilkanMasterSummary(){
+  const sel = masterSummaryPic.value || 'all';
+  const start = masterSummaryStartDate.value; const end = masterSummaryEndDate.value;
+  const users = Object.keys(JSON.parse(localStorage.getItem('app_users')||'{}')).filter(n=>n!=='admin');
+  const pics = sel === 'all' ? users : [sel];
+
+  const labels = []; const dataVals = []; const summaryRows = [];
+
+  pics.forEach(pic=>{
+    const data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
+    let filtered = data;
+    if(start && end) filtered = data.filter(d=>d.tanggal >= start && d.tanggal <= end);
+    const totalJam = filtered.reduce((s,i)=> s + (parseFloat(i.totalJam) || 0), 0);
+    const totalEntry = filtered.length;
+    const avg = totalEntry ? (totalJam/totalEntry).toFixed(2) : 0;
+    const lastUpdate = data.length ? data[0].lastUpdate : '-';
+    summaryRows.push({pic,totalJam:totalJam.toFixed(2),totalEntry,avg,lastUpdate});
+    labels.push(pic); dataVals.push(parseFloat(totalJam.toFixed(2)));
+  });
+
+  bodyMasterSummary.innerHTML = '';
+  summaryRows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.pic}</td><td>${r.totalJam} jam</td><td>${r.totalEntry}</td><td>${r.avg} jam/hari</td><td>${r.lastUpdate}</td>`;
+    bodyMasterSummary.appendChild(tr);
+  });
+
+  renderMasterSummaryChart(labels, dataVals);
+}
+
+/* Chart */
+function renderMasterSummaryChart(labels, data){
+  const ctx = document.getElementById('masterSummaryChart').getContext('2d');
+  if(masterSummaryChart) masterSummaryChart.destroy();
+  masterSummaryChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:labels, datasets:[{ label:'Total Jam Lembur', data:data, backgroundColor:'rgba(52,152,219,0.8)' }]},
+    options:{ responsive:true, scales:{ y:{ beginAtZero:true, title:{ display:true, text:'Total Jam' } } } }
+  });
+}
+
+/* ========== SETTING (users) ========== */
+function loadPICList(){
+  const users = JSON.parse(localStorage.getItem('app_users')||'{}');
+  const list = Object.keys(users).filter(n=>n!=='admin');
+  editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
+  list.forEach(n => editPicName.innerHTML += `<option value="${n}">${n}</option>`);
+  // admin filter options refresh
+  adminFilterPic.innerHTML = '<option value="all">Select All</option>'; masterOutputPic.innerHTML = '<option value="all">Select All</option>'; masterSummaryPic.innerHTML = '<option value="all">Select All</option>';
+  list.forEach(n=>{ adminFilterPic.innerHTML += `<option>${n}</option>`; masterOutputPic.innerHTML += `<option>${n}</option>`; masterSummaryPic.innerHTML += `<option>${n}</option>`; });
+}
+
+function tambahPIC(){
+  const name = newPicName.value.trim(); const pass = newPicPass.value.trim();
+  if(!name || !pass){ settingPesan.textContent='Nama & password harus diisi!'; settingPesan.style.color='red'; return; }
+  const users = JSON.parse(localStorage.getItem('app_users')||'{}');
+  if(users[name]){ settingPesan.textContent='Nama PIC sudah ada!'; settingPesan.style.color='red'; return; }
+  users[name] = pass; localStorage.setItem('app_users', JSON.stringify(users));
+  settingPesan.textContent = `✅ PIC "${name}" ditambahkan.`; settingPesan.style.color='green';
+  newPicName.value=''; newPicPass.value='';
+  loadPICList(); tampilkanDaftarPassword();
+}
+
+function editPasswordPIC(){
+  const name = editPicName.value; const pass = editPicPass.value.trim();
+  if(!name || !pass){ settingPesan.textContent='Pilih PIC & isi password baru!'; settingPesan.style.color='red'; return; }
+  const users = JSON.parse(localStorage.getItem('app_users')||'{}'); users[name] = pass; localStorage.setItem('app_users', JSON.stringify(users));
+  settingPesan.textContent = `✅ Password ${name} berhasil diubah.`; settingPesan.style.color='green';
+  editPicPass.value=''; tampilkanDaftarPassword();
+}
+
+function tampilkanDaftarPassword(){
+  const users = JSON.parse(localStorage.getItem('app_users')||'{}');
+  passwordListBody.innerHTML = '';
+  const list = Object.keys(users).filter(n=>n!=='admin');
+  list.forEach(n=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><strong>${n}</strong></td><td>${users[n]}</td><td><span style="color:green">✅ Aktif</span></td>`;
+    passwordListBody.appendChild(tr);
+  });
+}
+
+/* ========== EXPORT MASTER OUTPUT ========== */
+function exportMasterOutputToExcel(){
+  const sel = masterOutputPic.value || 'all'; const start = masterOutputStartDate.value; const end = masterOutputEndDate.value;
+  const users = Object.keys(JSON.parse(localStorage.getItem('app_users')||'{}')).filter(n=>n!=='admin');
+  const pics = sel==='all'?users:[sel];
+  let all=[];
+  pics.forEach(pic=>{
+    const data = JSON.parse(localStorage.getItem(`lembur_${pic}`)||'[]');
+    data.forEach(d=>{ const c=Object.assign({},d); c.pic=pic; all.push(c); });
+  });
+  if(start && end) all = all.filter(d=>d.tanggal >= start && d.tanggal <= end);
+  if(all.length===0) return alert('Tidak ada data.');
+  const ws=[['PIC','Tanggal','Jam Mulai','Jam Selesai','Total Jam','Plant','Volume','Uraian','Last Update']];
+  all.forEach(i=> ws.push([i.pic,i.tanggal,i.jamMulai,i.jamSelesai,i.totalJam,(i.plant?i.plant.join(', '):''),i.volume||'',i.uraianTugas||'',i.lastUpdate||'']));
+  const sheet = XLSX.utils.aoa_to_sheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,sheet,'MasterOutput'); XLSX.writeFile(wb, `MasterOutput_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+/* ===========================
+   Event bindings & init
+   =========================== */
+document.addEventListener('DOMContentLoaded', ()=>{
+  initUsers();
+
+  // hide sidebar initially (before login) but ensure toggle visible when logged in
+  sidebar.classList.add('hidden');
+  toggleBtn.classList.add('hidden');
+
+  // generate initial plant selects
+  generatePlantDropdowns();
+
+  // event bindings
+  btnLogin.addEventListener('click', login);
+  btnLogout.addEventListener('click', logout);
+  btnSimpan.addEventListener('click', simpanLembur);
+  btnFilter.addEventListener('click', tampilkanDataPIC);
+  btnExport.addEventListener('click', exportToExcel);
+  btnAdminFilter.addEventListener('click', tampilkanDataAdmin);
+
+  btnMasterOutputFilter.addEventListener('click', tampilkanMasterOutput);
+  btnMasterOutputExport.addEventListener('click', exportMasterOutputToExcel);
+  btnMasterSummaryFilter.addEventListener('click', tampilkanMasterSummary);
+
+  btnAddPic.addEventListener('click', tambahPIC);
+  btnEditPic.addEventListener('click', editPasswordPIC);
+
+  // totalPlant change -> regenerate plant inputs
+  totalPlant.addEventListener('input', generatePlantDropdowns);
+
+  // sidebar toggle logic: collapse / expand, and reposition toggle
+  toggleBtn.addEventListener('click', ()=>{
+    sidebar.classList.toggle('collapsed');
+    // reposition button so it remains visible after collapse
+    setTimeout(positionToggleButton, 50);
+  });
+
+  // initial position of toggle (even hidden) so when shown it's at right place
+  setTimeout(positionToggleButton, 100);
+
+  // sidebar menu navigation
+  document.querySelectorAll('.sidebar-menu li').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      const tab = item.getAttribute('data-tab');
+      // hide all
+      document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
+      // show selected
+      if(tab === 'rekap'){
+        const user = localStorage.getItem('loggedInUser');
+        if(user === 'admin'){ tabRekapAdmin.classList.remove('hidden'); tampilkanDataAdmin(); }
+        else { tabRekapPic.classList.remove('hidden'); tampilkanDataPIC(); }
+      } else if(tab === 'master'){ tabMasterOutput.classList.remove('hidden'); tampilkanMasterOutput(); }
+      else if(tab === 'master-output'){ tabMasterOutput.classList.remove('hidden'); tampilkanMasterOutput(); }
+      else if(tab === 'master-summary'){ tabMasterSummary.classList.remove('hidden'); tampilkanMasterSummary(); }
+      else if(tab === 'master-setting'){ tabMasterSetting.classList.remove('hidden'); loadPICList(); tampilkanDaftarPassword(); }
+
+      document.querySelectorAll('.sidebar-menu li').forEach(i=>i.classList.remove('active'));
+      item.classList.add('active');
+
+      // reposition toggle in case sidebar changed size
+      setTimeout(positionToggleButton, 50);
+    });
+  });
+
+  // modal events
+  editCancel.addEventListener('click', (e)=>{ e.preventDefault(); closeEditModal(); });
+  editModal.addEventListener('click', (e)=>{ if(e.target === editModal) closeEditModal(); });
+  editSave.addEventListener('click', (e)=>{ e.preventDefault(); saveEditedData(); });
+
+  // if user already logged in, show app
+  if(localStorage.getItem('loggedInUser')) showAppAfterLogin();
+
+  // reposition toggle on window resize
+  window.addEventListener('resize', ()=> setTimeout(positionToggleButton, 80));
+});
+
+/* Expose some functions to global for inline onclick handlers */
+window.editDataAdmin = editDataAdmin;
+window.deleteDataAdmin = deleteDataAdmin;
+window.exportToExcel = exportToExcel;
+window.exportMasterOutputToExcel = exportMasterOutputToExcel;
+window.tampilkanDataAdmin = tampilkanDataAdmin;
+window.tampilkanDataPIC = tampilkanDataPIC;
+window.tampilkanMasterOutput = tampilkanMasterOutput;
+window.tampilkanMasterSummary = tampilkanMasterSummary;
+
+</script>
 </body>
 </html>
