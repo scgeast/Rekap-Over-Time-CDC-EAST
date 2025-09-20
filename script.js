@@ -137,16 +137,34 @@ function renderMasterOutput() {
   });
 
   CONTENT_AREA.innerHTML = `
+    <h2>📊 Master Output - Admin</h2>
     <canvas id="chartSummary" height="120"></canvas>
-    <button onclick="exportAllExcel()">Export Semua Excel</button>
-    <button onclick="exportJSON()">Backup JSON</button>
+    <div style="margin: 12px 0;">
+      <button class="primary" onclick="exportAllExcel()">Export Semua Excel</button>
+      <button class="ghost" onclick="exportJSON()">Backup JSON</button>
+    </div>
     <table>
-      <thead><tr><th>User</th><th>Total Jam</th><th#>Jumlah Entry</th></tr></thead>
-      <tbody>${summary.map(s => `<tr><td>${s.user}</td><td>${s.total.toFixed(2)}</td><td>${s.count}</td></tr>`).join("")}</tbody>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Total Jam</th>
+          <th>Jumlah Entry</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${summary.map(s => `
+          <tr>
+            <td>${s.user}</td>
+            <td>${s.total.toFixed(2)}</td>
+            <td>${s.count}</td>
+          </tr>
+        `).join("")}
+      </tbody>
     </table>
-    <h3>Manajemen User</h3>
+    <h3 style="margin-top: 24px;">👥 Manajemen User</h3>
     <div id="user-setting"></div>
   `;
+
   renderChart(summary);
   renderUserSetting();
 }
