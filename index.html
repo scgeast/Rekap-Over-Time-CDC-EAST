@@ -122,6 +122,27 @@
     #toggle-sidebar{ top:10px; }
     #login-section{ margin:40px 16px; }
   }
+
+  /* ============ CSS BARU UNTUK TOGGLE PASSWORD ============ */
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  .toggle-password-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    color: #777;
+  }
+  .toggle-password-btn:hover {
+    color: #333;
+  }
+  /* ============ AKHIR CSS BARU ============ */
 </style>
 </head>
 <body>
@@ -148,6 +169,8 @@
   </ul>
   <div style="margin-top:auto;padding:12px;">
     <div style="margin-bottom:8px;"><strong>User:</strong> <span id="nama-user"></span></div>
+    <!-- Tombol Ganti Password untuk PIC -->
+    <button id="btn-change-password-pic" class="logout-btn" style="background:#f39c12; margin-bottom: 8px; display: none;">🔑 Ganti Password</button>
     <button id="btn-logout" class="logout-btn" style="background:var(--danger);">Logout</button>
   </div>
 </div>
@@ -171,11 +194,39 @@
       </div>
       <div class="form-group">
         <label for="password">Password:</label>
-        <input id="password" type="password" placeholder="Masukkan password" />
+        <div class="password-wrapper">
+          <input id="password" type="password" placeholder="Masukkan password" />
+          <button type="button" class="toggle-password-btn" id="toggle-password-login">👁️</button>
+        </div>
       </div>
       <button id="btn-login">Login</button>
       <p id="login-error" style="color:#c0392b;margin-top:8px;"></p>
     </div>
+
+    <!-- MODAL: GANTI PASSWORD UNTUK PIC -->
+    <div id="change-password-modal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
+        <h3 id="change-password-title">🔑 Ganti Password Anda</h3>
+        <div style="margin-bottom:8px;">
+          <label for="current-password">Password Lama</label>
+          <input id="current-password" type="password" placeholder="Masukkan password lama Anda" />
+        </div>
+        <div style="margin-bottom:8px;">
+          <label for="new-password">Password Baru</label>
+          <input id="new-password" type="password" placeholder="Masukkan password baru" />
+        </div>
+        <div style="margin-bottom:8px;">
+          <label for="confirm-new-password">Konfirmasi Password Baru</label>
+          <input id="confirm-new-password" type="password" placeholder="Ketik ulang password baru" />
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button id="change-password-cancel">Batal</button>
+          <button id="change-password-save" style="background:var(--success);">Simpan</button>
+        </div>
+        <p id="change-password-message" style="margin-top:8px; text-align: center;"></p>
+      </div>
+    </div>
+
     <!-- TAB: PIC -->
     <div id="tab-rekap-pic" class="tab-content hidden">
       <div class="header-flex">
@@ -453,6 +504,18 @@ const editVolume = document.getElementById('edit-volume');
 const editUraian = document.getElementById('edit-uraian');
 const editCancel = document.getElementById('edit-cancel');
 const editSave = document.getElementById('edit-save');
+
+// DOM untuk fitur baru
+const togglePasswordLogin = document.getElementById('toggle-password-login');
+const btnChangePasswordPic = document.getElementById('btn-change-password-pic');
+const changePasswordModal = document.getElementById('change-password-modal');
+const currentPasswordInput = document.getElementById('current-password');
+const newPasswordInput = document.getElementById('new-password');
+const confirmNewPasswordInput = document.getElementById('confirm-new-password');
+const changePasswordCancel = document.getElementById('change-password-cancel');
+const changePasswordSave = document.getElementById('change-password-save');
+const changePasswordMessage = document.getElementById('change-password-message');
+
 let masterSummaryChart = null;
 let editingContext = null; // {id, pic}
 /* ========== Helpers ========== */
@@ -531,6 +594,8 @@ function showAppAfterLogin(){
     tampilkanDataAdmin();
     loadPICList();
     tampilkanDaftarPassword();
+    // Sembunyikan tombol ganti password untuk PIC jika user adalah admin
+    btnChangePasswordPic.style.display = 'none';
   } else {
     document.querySelectorAll('.admin-only').forEach(e => e.style.display = 'none');
     tabRekapPic.classList.remove('hidden');
@@ -541,6 +606,8 @@ function showAppAfterLogin(){
     filterStartDate.value = new Date(new Date().setMonth(new Date().getMonth()-1)).toISOString().slice(0,10);
     filterEndDate.value = today;
     tampilkanDataPIC();
+    // Tampilkan tombol ganti password untuk PIC
+    btnChangePasswordPic.style.display = 'block';
   }
   // default filter dates for masters
   const today = new Date().toISOString().slice(0,10);
@@ -824,6 +891,72 @@ function exportMasterOutputToExcel(){
   all.forEach(i=> ws.push([i.pic,i.tanggal,i.jamMulai,i.jamSelesai,i.totalJam,(i.plant?i.plant.join(', '):''),i.volume||'',i.uraianTugas||'',i.lastUpdate||'']));
   const sheet = XLSX.utils.aoa_to_sheet(ws); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,sheet,'MasterOutput'); XLSX.writeFile(wb, `MasterOutput_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
+
+/* ========== FITUR BARU: GANTI PASSWORD UNTUK PIC ========== */
+function openChangePasswordModal() {
+  currentPasswordInput.value = '';
+  newPasswordInput.value = '';
+  confirmNewPasswordInput.value = '';
+  changePasswordMessage.textContent = '';
+  changePasswordMessage.style.color = '';
+  changePasswordModal.classList.add('show');
+  changePasswordModal.style.display = 'flex';
+}
+
+function closeChangePasswordModal() {
+  changePasswordModal.classList.remove('show');
+  changePasswordModal.style.display = 'none';
+}
+
+function saveNewPassword() {
+  const currentUser = localStorage.getItem('loggedInUser');
+  if (!currentUser || currentUser === 'admin') {
+    changePasswordMessage.textContent = 'Fitur ini hanya untuk PIC.';
+    changePasswordMessage.style.color = 'red';
+    return;
+  }
+
+  const currentPass = currentPasswordInput.value;
+  const newPass = newPasswordInput.value;
+  const confirmPass = confirmNewPasswordInput.value;
+
+  // Validasi input
+  if (!currentPass || !newPass || !confirmPass) {
+    changePasswordMessage.textContent = 'Semua field harus diisi.';
+    changePasswordMessage.style.color = 'red';
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    changePasswordMessage.textContent = 'Password baru dan konfirmasi tidak cocok.';
+    changePasswordMessage.style.color = 'red';
+    return;
+  }
+
+  // Ambil daftar user
+  const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+
+  // Verifikasi password lama
+  if (users[currentUser] !== currentPass) {
+    changePasswordMessage.textContent = 'Password lama salah.';
+    changePasswordMessage.style.color = 'red';
+    return;
+  }
+
+  // Update password
+  users[currentUser] = newPass;
+  localStorage.setItem('app_users', JSON.stringify(users));
+
+  // Beri notifikasi sukses
+  changePasswordMessage.textContent = '✅ Password berhasil diubah!';
+  changePasswordMessage.style.color = 'green';
+
+  // Tutup modal setelah 1.5 detik
+  setTimeout(() => {
+    closeChangePasswordModal();
+  }, 1500);
+}
+
 /* ===========================
    Event bindings & init
    =========================== */
@@ -850,6 +983,22 @@ document.addEventListener('DOMContentLoaded', ()=>{
   btnMasterSummaryFilter.addEventListener('click', tampilkanMasterSummary);
   btnAddPic.addEventListener('click', tambahPIC);
   btnEditPic.addEventListener('click', editPasswordPIC);
+
+  // Toggle show/hide password di form login
+  togglePasswordLogin.addEventListener('click', function() {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    this.textContent = type === 'password' ? '👁️' : '🙈';
+  });
+
+  // Event untuk tombol ganti password PIC
+  btnChangePasswordPic.addEventListener('click', openChangePasswordModal);
+  changePasswordCancel.addEventListener('click', closeChangePasswordModal);
+  changePasswordSave.addEventListener('click', saveNewPassword);
+  // Tutup modal jika klik di luar
+  changePasswordModal.addEventListener('click', (e) => {
+    if (e.target === changePasswordModal) closeChangePasswordModal();
+  });
 
   // totalPlant change -> regenerate plant inputs
   totalPlant.addEventListener('input', generatePlantDropdowns);
