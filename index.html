@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Rekap Over Time CDC EAST</title>
+<title>Rekap Over Time CDC EAST - Final</title>
 
 <!-- Dependencies -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -13,6 +13,7 @@
   :root{
     --primary:#3498db; --danger:#e74c3c; --success:#27ae60;
     --sidebar:#2c3e50; --text:#333; --bg:#f4f6f9;
+    --sidebar-width:250px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
@@ -20,26 +21,43 @@
     background:var(--bg); color:var(--text); display:flex; min-height:100vh;
   }
 
-  /* Toggle button (hidden before login) */
-  .toggle-btn{
-    position: absolute; top: 12px; left: 12px;
-    background:var(--primary); color:#fff; border:none;
-    padding:8px 12px; border-radius:8px; cursor:pointer; z-index:1200;
-  }
-
   /* Sidebar */
-  .sidebar{
-    width:250px; background:var(--sidebar); color:#fff;
-    padding:20px 10px; display:flex; flex-direction:column;
-    transition:all .25s ease;
+  #sidebar {
+    width: var(--sidebar-width);
+    background:var(--sidebar);
+    color:#fff;
+    padding:20px 12px;
+    display:flex;
+    flex-direction:column;
+    transition: width .25s ease, padding .25s ease;
+    position:relative;
+    z-index:1000;
   }
-  .sidebar.collapsed{ width:0; padding:0; overflow:hidden; }
-  .sidebar.hidden{ display:none; }
-  .sidebar-header{ padding:0 12px 12px; border-bottom:1px solid rgba(255,255,255,0.08);}
-  .sidebar-header h3{ font-size:1.05rem; display:flex; align-items:center; gap:8px; }
+  #sidebar.collapsed{
+    width: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  .sidebar-header{ padding:0 12px 12px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .sidebar-header h3{ font-size:1.05rem; display:flex; align-items:center; gap:8px; margin:0; }
   .sidebar-menu{ list-style:none; padding:8px 0; margin-top:8px; }
   .sidebar-menu li{ padding:10px 14px; cursor:pointer; border-radius:6px; display:flex; gap:8px; align-items:center; }
   .sidebar-menu li.active, .sidebar-menu li:hover{ background:rgba(255,255,255,0.06); }
+
+  /* Toggle button (positioned to the right edge of sidebar) */
+  #toggle-sidebar {
+    position: absolute;
+    top: 12px;
+    /* left will be updated by JS so button appears at right edge of sidebar */
+    z-index: 1100;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    padding:8px 10px;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:0 6px 14px rgba(0,0,0,0.12);
+  }
 
   /* Main content */
   .main-content{ flex:1; padding:22px; overflow-y:auto; }
@@ -58,8 +76,17 @@
   th,td{ padding:10px; border-bottom:1px solid #eee; text-align:left; vertical-align:middle; }
   th{ background:#f6f9fc; font-weight:700; }
 
-  #login-section{ max-width:480px; margin:18px auto; }
+  /* LOGIN BOX - centered and smaller */
+  #login-section{
+    max-width:420px;
+    margin:70px auto;
+    padding:24px;
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.06);
+  }
   #login-section .form-group label{ font-size:0.8em; } /* login label lebih kecil */
+  #login-section h1{ text-align:center; margin-bottom:16px; }
 
   .hidden{ display:none !important; }
   .success{ color:var(--success); font-weight:700; }
@@ -67,6 +94,9 @@
   /* header-flex for title + total jam */
   .header-flex{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; }
   #total-jam-lembur{ background:#eef6ff; padding:8px 12px; border-radius:8px; font-weight:700; color:#15395b; }
+
+  /* plant inline container */
+  #plant-dropdowns-inline{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
   /* modal */
   .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; }
@@ -77,25 +107,25 @@
   /* responsive */
   @media (max-width:900px){
     .row{ flex-direction:column; }
-    .sidebar{ position:fixed; height:100vh; z-index:1100; left:0; top:0; }
-    .toggle-btn{ top:10px; left:10px; }
+    #sidebar{ position:fixed; height:100vh; left:0; top:0; z-index:1000; }
+    #toggle-sidebar{ top:10px; }
+    #login-section{ margin:40px 16px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Toggle (hidden until login) -->
-<button id="toggle-sidebar" class="toggle-btn hidden">☰</button>
-
 <!-- Sidebar -->
-<div id="sidebar" class="sidebar hidden">
+<div id="sidebar" class="">
   <div class="sidebar-header">
     <h3>📂 Menu</h3>
+    <!-- Toggle placed inside header so its vertical position is aligned; JS will move it horizontally -->
+    <button id="toggle-sidebar" aria-label="Toggle sidebar">☰</button>
   </div>
 
   <ul class="sidebar-menu">
-    <li data-tab="rekap" class="active"><span>📋</span><span>Rekap Over Time</span></li>
-    <li data-tab="master" class="admin-only"><span>📁</span><span>Master</span></li>
+    <li data-tab="rekap" class="active"><span>📋</span>&nbsp;<span>Rekap Over Time</span></li>
+    <li data-tab="master" class="admin-only"><span>📁</span>&nbsp;<span>Master</span></li>
     <ul class="submenu admin-only" style="list-style:none;padding-left:14px;margin-top:8px;">
       <li data-tab="master-output">→ Output Rekapan</li>
       <li data-tab="master-summary">→ Summary Over Time CDC</li>
@@ -170,9 +200,9 @@
           <label for="total-plant">Total Plant</label>
           <input id="total-plant" type="number" min="1" max="5" value="1" />
         </div>
-        <div class="col" style="flex:0 0 220px;">
+        <div class="col" style="flex:0 0 260px;">
           <label>Plant Name</label>
-          <div id="plant-dropdowns-inline" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+          <div id="plant-dropdowns-inline"></div>
         </div>
         <div class="col" style="flex:0 0 130px;">
           <label for="volume">Volume (m³)</label>
@@ -223,7 +253,7 @@
       <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
         <div class="col">
           <label for="admin-filter-pic">Nama PIC</label>
-          <select id="admin-filter-pic"><option value="all">Select All</option><option>Agung Setyawan</option><option>Fahmi Ardiansyah</option><option>Drajat Triono</option><option>Wiyanto</option><option>Nur Fauziah</option></select>
+          <select id="admin-filter-pic"><option value="all">Select All</option></select>
         </div>
         <div class="col">
           <label for="admin-filter-start-date">Start Date</label>
@@ -253,7 +283,7 @@
       <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
         <div class="col">
           <label for="master-output-pic">Nama PIC</label>
-          <select id="master-output-pic"><option value="all">Select All</option><option>Agung Setyawan</option><option>Fahmi Ardiansyah</option><option>Drajat Triono</option><option>Wiyanto</option><option>Nur Fauziah</option></select>
+          <select id="master-output-pic"><option value="all">Select All</option></select>
         </div>
         <div class="col">
           <label for="master-output-start-date">Start Date</label>
@@ -282,7 +312,7 @@
       <div class="row filter-bar" style="background:#f6f9fc;padding:12px;border-radius:10px;">
         <div class="col">
           <label for="master-summary-pic">Nama PIC</label>
-          <select id="master-summary-pic"><option value="all">Select All</option><option>Agung Setyawan</option><option>Fahmi Ardiansyah</option><option>Drajat Triono</option><option>Wiyanto</option><option>Nur Fauziah</option></select>
+          <select id="master-summary-pic"><option value="all">Select All</option></select>
         </div>
         <div class="col">
           <label for="master-summary-start-date">Start Date</label>
@@ -369,7 +399,9 @@
 </div>
 
 <script>
-/* ========== Data & DOM ========== */
+/* =======================
+   Data & DOM references
+   ======================= */
 const DEFAULT_USERS = {
   "Agung Setyawan":"12345",
   "Fahmi Ardiansyah":"67890",
@@ -378,7 +410,6 @@ const DEFAULT_USERS = {
   "Nur Fauziah":"54321",
   "admin":"123456789"
 };
-
 const plantOptions = ["Denpasar2","Gianyar","Manyar","Manukan","Kediri","Gempol","Krian"];
 
 /* DOM */
@@ -459,18 +490,16 @@ let masterSummaryChart = null;
 let editingContext = null; // {id, pic}
 
 /* ========== Helpers ========== */
-function initUsers(){
-  if(!localStorage.getItem('app_users')) localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS));
-}
+function initUsers(){ if(!localStorage.getItem('app_users')) localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS)); }
 
-/* generate plant selects */
+/* generate plant selects according to totalPlant */
 function generatePlantDropdowns(){
   plantDropdownsInline.innerHTML = '';
-  const count = parseInt(totalPlant.value) || 1;
+  const count = Math.max(0, parseInt(totalPlant.value) || 0);
   for(let i=1;i<=count;i++){
     const s = document.createElement('select');
     s.className = 'plant-select';
-    s.style.width = '120px';
+    s.style.width = '140px';
     s.innerHTML = `<option value="">Pilih</option>` + plantOptions.map(p=>`<option value="${p}">${p}</option>`).join('');
     plantDropdownsInline.appendChild(s);
   }
@@ -486,6 +515,17 @@ function calcTotalJamFromTimes(mulai, selesai){
     if(menit < 0) menit += 24*60;
     return (menit/60);
   }catch(e){ return 0; }
+}
+
+/* position toggle button to appear at right edge of sidebar (and visible when collapsed) */
+function positionToggleButton(){
+  const sidebarRect = sidebar.getBoundingClientRect();
+  // When collapsed width may be 0; ensure toggle is still visible at left 8px
+  const left = Math.max(sidebarRect.left + sidebarRect.width - 36, 8);
+  toggleBtn.style.left = left + 'px';
+  // keep top aligned with header
+  const top = sidebarRect.top + 12;
+  toggleBtn.style.top = top + 'px';
 }
 
 /* ==========================
@@ -515,9 +555,12 @@ function logout(){
 function showAppAfterLogin(){
   const user = localStorage.getItem('loggedInUser');
   if(!user) return;
-  // show sidebar & toggle
-  sidebar.classList.remove('hidden');
+
+  // show sidebar and keep toggle visible
+  document.getElementById('sidebar').classList.remove('hidden');
   toggleBtn.classList.remove('hidden');
+  // ensure sidebar not collapsed initially
+  sidebar.classList.remove('collapsed');
 
   // update user display
   namaUserSpan.textContent = user;
@@ -526,7 +569,9 @@ function showAppAfterLogin(){
   // hide login and show appropriate tab
   loginSection.classList.add('hidden');
 
+  // hide all tab contents first
   document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+
   if(user === 'admin'){
     document.querySelectorAll('.admin-only').forEach(e => e.style.display = 'block');
     tabRekapAdmin.classList.remove('hidden');
@@ -552,6 +597,9 @@ function showAppAfterLogin(){
   adminFilterStartDate.value = oneMonthAgoStr; adminFilterEndDate.value = today;
   masterOutputStartDate.value = oneMonthAgoStr; masterOutputEndDate.value = today;
   masterSummaryStartDate.value = oneMonthAgoStr; masterSummaryEndDate.value = today;
+
+  // reposition toggle
+  setTimeout(positionToggleButton, 60);
 }
 
 /* ========== PIC (save/display/export) ========== */
@@ -563,13 +611,17 @@ function simpanLembur(){
   const mulai = jamMulai.value;
   const selesai = jamSelesai.value;
   const tp = parseInt(totalProject.value) || 1;
-  const tplant = parseInt(totalPlant.value) || 1;
+  const tplant = parseInt(totalPlant.value) || 0;
   const volume = volumeInput.value;
   const uraian = uraianTugas.value;
   const plantSel = Array.from(document.querySelectorAll('.plant-select')).map(s=>s.value).filter(Boolean);
 
   if(!tanggal || !mulai || !selesai){
     pesan.textContent = 'Tanggal & jam harus diisi!'; pesan.className=''; return;
+  }
+
+  if(plantSel.length < tplant && tplant > 0){
+    pesan.textContent = 'Isi semua Plant Name sesuai Total Plant.'; pesan.className=''; return;
   }
 
   const totalJam = calcTotalJamFromTimes(mulai, selesai).toFixed(2);
@@ -652,8 +704,8 @@ function tampilkanDataAdmin(){
   const selected = adminFilterPic.value || 'all';
   const start = adminFilterStartDate.value;
   const end = adminFilterEndDate.value;
-  const pics = Object.keys(JSON.parse(localStorage.getItem('app_users')||'{}')).filter(n=>n!=='admin');
-  const iterate = selected === 'all' ? pics : [selected];
+  const users = Object.keys(JSON.parse(localStorage.getItem('app_users')||'{}')).filter(n=>n!=='admin');
+  const iterate = selected === 'all' ? users : [selected];
 
   let all = [];
   iterate.forEach(pic=>{
@@ -800,7 +852,7 @@ function renderMasterSummaryChart(labels, data){
   if(masterSummaryChart) masterSummaryChart.destroy();
   masterSummaryChart = new Chart(ctx, {
     type:'bar',
-    data:{ labels:labels, datasets:[{ label:'Total Jam Lembur', data:data }]},
+    data:{ labels:labels, datasets:[{ label:'Total Jam Lembur', data:data, backgroundColor:'rgba(52,152,219,0.8)' }]},
     options:{ responsive:true, scales:{ y:{ beginAtZero:true, title:{ display:true, text:'Total Jam' } } } }
   });
 }
@@ -868,13 +920,15 @@ function exportMasterOutputToExcel(){
    =========================== */
 document.addEventListener('DOMContentLoaded', ()=>{
   initUsers();
-  // Hide sidebar+toggle initially (login-only)
-  sidebar.classList.add('hidden'); toggleBtn.classList.add('hidden');
+
+  // hide sidebar initially (before login) but ensure toggle visible when logged in
+  sidebar.classList.add('hidden');
+  toggleBtn.classList.add('hidden');
 
   // generate initial plant selects
   generatePlantDropdowns();
 
-  // Buttons
+  // event bindings
   btnLogin.addEventListener('click', login);
   btnLogout.addEventListener('click', logout);
   btnSimpan.addEventListener('click', simpanLembur);
@@ -889,8 +943,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
   btnAddPic.addEventListener('click', tambahPIC);
   btnEditPic.addEventListener('click', editPasswordPIC);
 
-  // sidebar toggle
-  toggleBtn.addEventListener('click', ()=> sidebar.classList.toggle('collapsed'));
+  // totalPlant change -> regenerate plant inputs
+  totalPlant.addEventListener('input', generatePlantDropdowns);
+
+  // sidebar toggle logic: collapse / expand, and reposition toggle
+  toggleBtn.addEventListener('click', ()=>{
+    sidebar.classList.toggle('collapsed');
+    // reposition button so it remains visible after collapse
+    setTimeout(positionToggleButton, 50);
+  });
+
+  // initial position of toggle (even hidden) so when shown it's at right place
+  setTimeout(positionToggleButton, 100);
 
   // sidebar menu navigation
   document.querySelectorAll('.sidebar-menu li').forEach(item=>{
@@ -899,24 +963,33 @@ document.addEventListener('DOMContentLoaded', ()=>{
       // hide all
       document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('hidden'));
       // show selected
-      if(tab === 'rekap'){ const user = localStorage.getItem('loggedInUser'); if(user === 'admin'){ tabRekapAdmin.classList.remove('hidden'); tampilkanDataAdmin(); } else { tabRekapPic.classList.remove('hidden'); tampilkanDataPIC(); } }
-      else if(tab === 'master'){ tabMasterOutput.classList.remove('hidden'); tampilkanMasterOutput(); }
+      if(tab === 'rekap'){
+        const user = localStorage.getItem('loggedInUser');
+        if(user === 'admin'){ tabRekapAdmin.classList.remove('hidden'); tampilkanDataAdmin(); }
+        else { tabRekapPic.classList.remove('hidden'); tampilkanDataPIC(); }
+      } else if(tab === 'master'){ tabMasterOutput.classList.remove('hidden'); tampilkanMasterOutput(); }
       else if(tab === 'master-output'){ tabMasterOutput.classList.remove('hidden'); tampilkanMasterOutput(); }
       else if(tab === 'master-summary'){ tabMasterSummary.classList.remove('hidden'); tampilkanMasterSummary(); }
       else if(tab === 'master-setting'){ tabMasterSetting.classList.remove('hidden'); loadPICList(); tampilkanDaftarPassword(); }
 
       document.querySelectorAll('.sidebar-menu li').forEach(i=>i.classList.remove('active'));
       item.classList.add('active');
+
+      // reposition toggle in case sidebar changed size
+      setTimeout(positionToggleButton, 50);
     });
   });
 
-  // Edit modal events
+  // modal events
   editCancel.addEventListener('click', (e)=>{ e.preventDefault(); closeEditModal(); });
   editModal.addEventListener('click', (e)=>{ if(e.target === editModal) closeEditModal(); });
   editSave.addEventListener('click', (e)=>{ e.preventDefault(); saveEditedData(); });
 
-  // show app if already logged in
+  // if user already logged in, show app
   if(localStorage.getItem('loggedInUser')) showAppAfterLogin();
+
+  // reposition toggle on window resize
+  window.addEventListener('resize', ()=> setTimeout(positionToggleButton, 80));
 });
 
 /* Expose some functions to global for inline onclick handlers */
