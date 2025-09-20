@@ -45,19 +45,23 @@
   .sidebar-menu li.active, .sidebar-menu li:hover{ background:rgba(255,255,255,0.06); }
 
   /* Toggle button (positioned to the right edge of sidebar) */
-  #toggle-sidebar {
-    position: absolute;
-    top: 12px;
-    /* left will be updated by JS so button appears at right edge of sidebar */
-    z-index: 1100;
-    background:var(--primary);
-    color:#fff;
-    border:none;
-    padding:8px 10px;
-    border-radius:8px;
-    cursor:pointer;
-    box-shadow:0 6px 14px rgba(0,0,0,0.12);
-  }
+#toggle-sidebar {
+  position: absolute;
+  top: 12px;
+  /* left will be updated by JS so button appears at right edge of sidebar */
+  z-index: 1100;
+  background: none; /* Hapus latar belakang */
+  color: #000; /* Warna teks hitam */
+  border: none;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 1.2em;
+}
+
+/* Opsional: Tambahkan sedikit efek saat di-hover */
+#toggle-sidebar:hover {
+  color: #333; /* Sedikit lebih gelap */
+}
 
   /* Main content */
   .main-content{ flex:1; padding:22px; overflow-y:auto; }
@@ -520,7 +524,7 @@ function calcTotalJamFromTimes(mulai, selesai){
 /* position toggle button to appear at right edge of sidebar (and visible when collapsed) */
 function positionToggleButton(){
   const sidebarRect = sidebar.getBoundingClientRect();
-  // When collapsed width may be 0; ensure toggle is still visible at left 8px
+  // When collapsed, ensure toggle is visible at a fixed position (e.g., 8px from left edge of viewport)
   const left = Math.max(sidebarRect.left + sidebarRect.width - 36, 8);
   toggleBtn.style.left = left + 'px';
   // keep top aligned with header
