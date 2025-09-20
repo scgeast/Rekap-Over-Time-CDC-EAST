@@ -56,7 +56,10 @@
         .sidebar-menu li i {
             margin-right: 10px;
         }
-
+        .submenu {
+            padding-left: 30px;
+            background: rgba(0,0,0,0.2);
+        }
         /* Main Content */
         .main-content {
             flex: 1;
@@ -107,6 +110,16 @@
         button:hover {
             background: #2980b9;
         }
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        .btn-edit {
+            background: #f39c12;
+        }
+        .btn-delete {
+            background: #e74c3c;
+        }
         .logout-btn {
             background: var(--danger);
             margin-top: 20px;
@@ -134,50 +147,21 @@
             color: var(--success);
             font-weight: bold;
         }
-
-        /* Horizontal Form Layout */
-        .row {
+        /* Filter Bar */
+        .filter-bar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             display: flex;
             gap: 15px;
-            margin-bottom: 15px;
-            align-items: flex-start;
+            flex-wrap: wrap;
+            align-items: end;
         }
-        .col {
+        .filter-item {
             flex: 1;
+            min-width: 200px;
         }
-        .col-auto {
-            width: auto;
-        }
-        .col-shrink {
-            flex: 0 0 auto;
-            width: auto;
-        }
-        .plant-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-        .plant-label {
-            font-weight: bold;
-            min-width: 70px;
-        }
-        .export-btn {
-            background: #27ae60;
-            margin-top: 20px;
-        }
-        .export-btn:hover {
-            background: #229954;
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-        }
-        .tab-content.active {
-            display: block;
-        }
-
         /* Chart Container */
         .chart-container {
             margin: 30px 0;
@@ -185,7 +169,6 @@
             background: #f8f9fa;
             border-radius: 10px;
         }
-
         /* Admin Only */
         .admin-only {
             display: none;
@@ -193,20 +176,21 @@
         .admin-visible {
             display: block !important;
         }
-
-        /* Backup Restore Section */
-        .backup-section {
-            background: #fef9e7;
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid #f1c40f;
+        /* Password List */
+        .password-table {
+            width: 100%;
+            border-collapse: collapse;
             margin: 20px 0;
         }
-        .backup-section h3 {
-            color: #e67e22;
-            margin-bottom: 15px;
+        .password-table th, .password-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
         }
-
+        .password-table th {
+            background: #3498db;
+            color: white;
+        }
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
@@ -220,9 +204,11 @@
                 margin: 0;
                 font-size: 1.2em;
             }
-            .row {
+            .filter-bar {
                 flex-direction: column;
-                gap: 10px;
+            }
+            .filter-item {
+                min-width: auto;
             }
         }
     </style>
@@ -237,12 +223,14 @@
             <li data-tab="rekap" class="active">
                 <i>📋</i> <span>Rekap Over Time</span>
             </li>
-            <li data-tab="summary" class="admin-only">
-                <i>📈</i> <span>Summarize</span>
+            <li data-tab="master" class="admin-only">
+                <i>📁</i> <span>Master</span>
             </li>
-            <li data-tab="setting" class="admin-only">
-                <i>⚙️</i> <span>Setting</span>
-            </li>
+            <ul class="submenu admin-only">
+                <li data-tab="master-output">→ Output Rekapan</li>
+                <li data-tab="master-summary">→ Summary Over Time CDC</li>
+                <li data-tab="master-setting">→ Setting</li>
+            </ul>
         </ul>
         <div style="margin-top: auto; padding: 20px;">
             <div id="user-info" style="margin-bottom: 15px;">
@@ -275,13 +263,13 @@
                     <input type="password" id="password" placeholder="Masukkan password" required>
                 </div>
                 <button id="btn-login">Login</button>
+                <p id="login-error" style="color: red; margin-top: 10px;"></p>
             </div>
 
-            <!-- Tab Contents -->
-            <!-- Tab 1: Rekap OT -->
-            <div id="tab-rekap" class="tab-content active">
+            <!-- Tab 1: Rekap OT (PIC Mode) -->
+            <div id="tab-rekap-pic" class="tab-content">
                 <h1>📝 Input & Rekap Lembur - <span id="nama-user-title"></span></h1>
-
+                
                 <h2>Input Lembur Hari Ini</h2>
                 <div class="row">
                     <div class="col">
@@ -322,18 +310,27 @@
                     <textarea id="uraian-tugas" rows="3" placeholder="Deskripsikan tugas lembur..."></textarea>
                 </div>
 
-                <button id="btn-simpan">Simpan Data Lembur</button>
-                <button id="btn-export" class="export-btn">Export ke Excel</button>
+                <button id="btn-simpan" class="btn-small">Save</button>
+                <button id="btn-export" class="btn-small" style="background: #27ae60; margin-left: 10px;">📊 Export Excel</button>
                 <p id="pesan"></p>
 
-                <h2>Rekap Lembur Bulan Ini</h2>
-                <div class="form-group">
-                    <label for="filter-bulan">Filter Bulan:</label>
-                    <input type="month" id="filter-bulan">
+                <h2 class="section-header">Output Rekapan</h2>
+                
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label for="filter-start-date">Start Date</label>
+                        <input type="date" id="filter-start-date">
+                    </div>
+                    <div class="filter-item">
+                        <label for="filter-end-date">End Date</label>
+                        <input type="date" id="filter-end-date">
+                    </div>
+                    <div class="filter-item" style="flex: 0 0 auto;">
+                        <button id="btn-filter" style="width: auto; padding: 10px 20px;">Terapkan Filter</button>
+                    </div>
                 </div>
-                <button id="btn-filter">Tampilkan</button>
 
-                <table id="tabel-lembur">
+                <table id="tabel-lembur-pic">
                     <thead>
                         <tr>
                             <th>Tanggal</th>
@@ -344,46 +341,169 @@
                             <th>Volume (m³)</th>
                             <th>Uraian Tugas</th>
                             <th>Last Update</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
-                    <tbody id="body-tabel">
+                    <tbody id="body-tabel-pic">
                         <!-- Data akan muncul di sini -->
                     </tbody>
                 </table>
-
-                <h3>Total Lembur Bulan Ini: <span id="total-jam">0.00</span> jam</h3>
             </div>
 
-            <!-- Tab 2: Summary (Admin Only) -->
-            <div id="tab-summary" class="tab-content admin-only">
-                <h1>📈 Summary Semua PIC</h1>
-
-                <div class="chart-container">
-                    <canvas id="summaryChart"></canvas>
+            <!-- Tab 2: Rekap OT (Admin Mode) -->
+            <div id="tab-rekap-admin" class="tab-content admin-only">
+                <h1>📊 Monitoring Rekap Lembur (Admin)</h1>
+                
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label for="admin-filter-pic">Nama PIC</label>
+                        <select id="admin-filter-pic">
+                            <option value="all">Select All</option>
+                            <option value="Agung Setyawan">Agung Setyawan</option>
+                            <option value="Fahmi Ardiansyah">Fahmi Ardiansyah</option>
+                            <option value="Drajat Triono">Drajat Triono</option>
+                            <option value="Wiyanto">Wiyanto</option>
+                            <option value="Nur Fauziah">Nur Fauziah</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="admin-filter-start-date">Start Date</label>
+                        <input type="date" id="admin-filter-start-date">
+                    </div>
+                    <div class="filter-item">
+                        <label for="admin-filter-end-date">End Date</label>
+                        <input type="date" id="admin-filter-end-date">
+                    </div>
+                    <div class="filter-item" style="flex: 0 0 auto;">
+                        <button id="btn-admin-filter" style="width: auto; padding: 10px 20px;">Terapkan Filter</button>
+                    </div>
                 </div>
 
-                <table id="tabel-summary">
+                <table id="tabel-lembur-admin">
                     <thead>
                         <tr>
-                            <th>Nama PIC</th>
-                            <th>Total Jam Lembur</th>
-                            <th>Total Entry</th>
+                            <th>PIC</th>
+                            <th>Tanggal</th>
+                            <th>Jam Mulai</th>
+                            <th>Jam Selesai</th>
+                            <th>Total Jam</th>
+                            <th>Plant</th>
+                            <th>Volume (m³)</th>
+                            <th>Uraian Tugas</th>
+                            <th>Last Update</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-tabel-admin">
+                        <!-- Data akan muncul di sini -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab 3: Master Output Rekapan -->
+            <div id="tab-master-output" class="tab-content admin-only">
+                <h1>📁 Master → Output Rekapan</h1>
+                
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label for="master-output-pic">Nama PIC</label>
+                        <select id="master-output-pic">
+                            <option value="all">Select All</option>
+                            <option value="Agung Setyawan">Agung Setyawan</option>
+                            <option value="Fahmi Ardiansyah">Fahmi Ardiansyah</option>
+                            <option value="Drajat Triono">Drajat Triono</option>
+                            <option value="Wiyanto">Wiyanto</option>
+                            <option value="Nur Fauziah">Nur Fauziah</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="master-output-start-date">Start Date</label>
+                        <input type="date" id="master-output-start-date">
+                    </div>
+                    <div class="filter-item">
+                        <label for="master-output-end-date">End Date</label>
+                        <input type="date" id="master-output-end-date">
+                    </div>
+                    <div class="filter-item" style="flex: 0 0 auto;">
+                        <button id="btn-master-output-filter" style="width: auto; padding: 10px 20px;">Terapkan Filter</button>
+                        <button id="btn-master-output-export" class="btn-small" style="background: #27ae60; margin-left: 10px;">📊 Export Excel</button>
+                    </div>
+                </div>
+
+                <table id="tabel-master-output">
+                    <thead>
+                        <tr>
+                            <th>PIC</th>
+                            <th>Tanggal</th>
+                            <th>Jam Mulai</th>
+                            <th>Jam Selesai</th>
+                            <th>Total Jam</th>
+                            <th>Plant</th>
+                            <th>Volume (m³)</th>
+                            <th>Uraian Tugas</th>
                             <th>Last Update</th>
                         </tr>
                     </thead>
-                    <tbody id="body-summary">
-                        <!-- Data summary akan muncul di sini -->
+                    <tbody id="body-master-output">
+                        <!-- Data akan muncul di sini -->
                     </tbody>
                 </table>
-
-                <button id="btn-export-summary" class="export-btn">Export Summary ke Excel</button>
             </div>
 
-            <!-- Tab 3: Setting (Admin Only) -->
-            <div id="tab-setting" class="tab-content admin-only">
-                <h1>⚙️ Setting Admin</h1>
+            <!-- Tab 4: Master Summary Over Time CDC -->
+            <div id="tab-master-summary" class="tab-content admin-only">
+                <h1>📁 Master → Summary Over Time CDC</h1>
+                
+                <div class="filter-bar">
+                    <div class="filter-item">
+                        <label for="master-summary-pic">Nama PIC</label>
+                        <select id="master-summary-pic">
+                            <option value="all">Select All</option>
+                            <option value="Agung Setyawan">Agung Setyawan</option>
+                            <option value="Fahmi Ardiansyah">Fahmi Ardiansyah</option>
+                            <option value="Drajat Triono">Drajat Triono</option>
+                            <option value="Wiyanto">Wiyanto</option>
+                            <option value="Nur Fauziah">Nur Fauziah</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="master-summary-start-date">Start Date</label>
+                        <input type="date" id="master-summary-start-date">
+                    </div>
+                    <div class="filter-item">
+                        <label for="master-summary-end-date">End Date</label>
+                        <input type="date" id="master-summary-end-date">
+                    </div>
+                    <div class="filter-item" style="flex: 0 0 auto;">
+                        <button id="btn-master-summary-filter" style="width: auto; padding: 10px 20px;">Terapkan Filter</button>
+                    </div>
+                </div>
 
-                <h3>🔧 Kelola PIC</h3>
+                <div class="chart-container">
+                    <canvas id="masterSummaryChart"></canvas>
+                </div>
+
+                <table id="tabel-master-summary">
+                    <thead>
+                        <tr>
+                            <th>PIC</th>
+                            <th>Total Jam Lembur</th>
+                            <th>Total Entry</th>
+                            <th>Rata-rata Jam/Hari</th>
+                            <th>Last Update</th>
+                        </tr>
+                    </thead>
+                    <tbody id="body-master-summary">
+                        <!-- Data akan muncul di sini -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tab 5: Master Setting -->
+            <div id="tab-master-setting" class="tab-content admin-only">
+                <h1>📁 Master → Setting</h1>
+                
+                <h3>➕ Tambah PIC Baru</h3>
                 <div class="row">
                     <div class="col">
                         <label for="new-pic-name">Nama PIC Baru</label>
@@ -415,43 +535,19 @@
                     </div>
                 </div>
 
-                <h3>🗑️ Hapus PIC</h3>
-                <div class="row">
-                    <div class="col">
-                        <label for="delete-pic-name">Pilih PIC untuk dihapus</label>
-                        <select id="delete-pic-name">
-                            <option value="">-- Pilih PIC --</option>
-                        </select>
-                    </div>
-                    <div class="col-shrink" style="align-self: flex-end;">
-                        <button id="btn-delete-pic" style="width: auto; padding: 10px 20px; background: var(--danger);">🗑️ Hapus PIC</button>
-                    </div>
-                </div>
-
-                <!-- ============= BACKUP & RESTORE SECTION ============= -->
-                <div class="backup-section">
-                    <h3>💾 Backup & Restore Data</h3>
-                    <p style="margin-bottom: 15px; color: #e67e22;">
-                        ⚠️ Fitur ini untuk mencegah kehilangan data jika cache browser dihapus.
-                    </p>
-                    <div class="row">
-                        <div class="col">
-                            <button id="btn-backup" style="width: auto; padding: 12px 24px; background: #e67e22;">
-                                📥 Backup Semua Data
-                            </button>
-                        </div>
-                        <div class="col">
-                            <input type="file" id="file-restore" accept=".json" style="width: 100%;">
-                        </div>
-                        <div class="col-shrink" style="align-self: flex-end;">
-                            <button id="btn-restore" style="width: auto; padding: 10px 20px; background: #e67e22;">
-                                📤 Restore Data
-                            </button>
-                        </div>
-                    </div>
-                    <p id="backup-restore-pesan" style="margin-top: 10px;"></p>
-                </div>
-                <!-- =================================================== -->
+                <h3>🔐 Daftar Password Semua PIC</h3>
+                <table class="password-table">
+                    <thead>
+                        <tr>
+                            <th>Nama PIC</th>
+                            <th>Password</th>
+                            <th>Akses</th>
+                        </tr>
+                    </thead>
+                    <tbody id="password-list-body">
+                        <!-- Password akan muncul di sini -->
+                    </tbody>
+                </table>
 
                 <div id="setting-pesan" style="margin-top: 20px;"></div>
             </div>
@@ -462,15 +558,15 @@
         // DOM Elements
         const loginSection = document.getElementById('login-section');
         const sidebarMenuItems = document.querySelectorAll('.sidebar-menu li');
-        const tabContents = document.querySelectorAll('.tab-content');
         const namaUserSpan = document.getElementById('nama-user');
         const namaUserTitle = document.getElementById('nama-user-title');
         const usernameSelect = document.getElementById('username');
         const passwordInput = document.getElementById('password');
         const btnLogin = document.getElementById('btn-login');
         const btnLogout = document.getElementById('btn-logout');
+        const loginError = document.getElementById('login-error');
 
-        // Rekap Tab Elements
+        // Rekap Tab Elements (PIC)
         const tanggalInput = document.getElementById('tanggal');
         const jamMulai = document.getElementById('jam-mulai');
         const jamSelesai = document.getElementById('jam-selesai');
@@ -482,93 +578,67 @@
         const btnSimpan = document.getElementById('btn-simpan');
         const btnExport = document.getElementById('btn-export');
         const pesan = document.getElementById('pesan');
-        const filterBulan = document.getElementById('filter-bulan');
+        const filterStartDate = document.getElementById('filter-start-date');
+        const filterEndDate = document.getElementById('filter-end-date');
         const btnFilter = document.getElementById('btn-filter');
-        const bodyTabel = document.getElementById('body-tabel');
-        const totalJamSpan = document.getElementById('total-jam');
+        const bodyTabelPic = document.getElementById('body-tabel-pic');
 
-        // Summary Tab Elements
-        const bodySummary = document.getElementById('body-summary');
-        const btnExportSummary = document.getElementById('btn-export-summary');
+        // Rekap Tab Elements (Admin)
+        const adminFilterPic = document.getElementById('admin-filter-pic');
+        const adminFilterStartDate = document.getElementById('admin-filter-start-date');
+        const adminFilterEndDate = document.getElementById('admin-filter-end-date');
+        const btnAdminFilter = document.getElementById('btn-admin-filter');
+        const bodyTabelAdmin = document.getElementById('body-tabel-admin');
 
-        // Setting Tab Elements
+        // Master Output Elements
+        const masterOutputPic = document.getElementById('master-output-pic');
+        const masterOutputStartDate = document.getElementById('master-output-start-date');
+        const masterOutputEndDate = document.getElementById('master-output-end-date');
+        const btnMasterOutputFilter = document.getElementById('btn-master-output-filter');
+        const btnMasterOutputExport = document.getElementById('btn-master-output-export');
+        const bodyMasterOutput = document.getElementById('body-master-output');
+
+        // Master Summary Elements
+        const masterSummaryPic = document.getElementById('master-summary-pic');
+        const masterSummaryStartDate = document.getElementById('master-summary-start-date');
+        const masterSummaryEndDate = document.getElementById('master-summary-end-date');
+        const btnMasterSummaryFilter = document.getElementById('btn-master-summary-filter');
+        const bodyMasterSummary = document.getElementById('body-master-summary');
+
+        // Master Setting Elements
         const newPicName = document.getElementById('new-pic-name');
         const newPicPass = document.getElementById('new-pic-pass');
         const btnAddPic = document.getElementById('btn-add-pic');
         const editPicName = document.getElementById('edit-pic-name');
         const editPicPass = document.getElementById('edit-pic-pass');
         const btnEditPic = document.getElementById('btn-edit-pic');
-        const deletePicName = document.getElementById('delete-pic-name');
-        const btnDeletePic = document.getElementById('btn-delete-pic');
+        const passwordListBody = document.getElementById('password-list-body');
         const settingPesan = document.getElementById('setting-pesan');
 
-        // Backup & Restore Elements
-        const btnBackup = document.getElementById('btn-backup');
-        const fileRestore = document.getElementById('file-restore');
-        const btnRestore = document.getElementById('btn-restore');
-        const backupRestorePesan = document.getElementById('backup-restore-pesan');
-
         // Chart
-        let summaryChart = null;
+        let masterSummaryChart = null;
 
-        // Daftar user dan password (disimpan di localStorage agar bisa diubah admin)
-        function initUsers() {
-            const defaultUsers = {
-                "Agung Setyawan": "12345",
-                "Fahmi Ardiansyah": "67890",
-                "Drajat Triono": "45678",
-                "Wiyanto": "23456",
-                "Nur Fauziah": "54321",
-                "admin": "123456789"
-            };
-            if (!localStorage.getItem('app_users')) {
-                localStorage.setItem('app_users', JSON.stringify(defaultUsers));
-            }
-        }
+        // Daftar user dan password
+        const DEFAULT_USERS = {
+            "Agung Setyawan": "12345",
+            "Fahmi Ardiansyah": "67890",
+            "Drajat Triono": "45678",
+            "Wiyanto": "23456",
+            "Nur Fauziah": "54321",
+            "admin": "123456789"
+        };
 
         // List Plant
         const plants = ["Denpasar2", "Gianyar", "Manyar", "Manukan", "Kediri", "Gempol", "Krian"];
 
-        // Event Listeners
-        btnLogin.addEventListener('click', login);
-        btnLogout.addEventListener('click', logout);
-        btnSimpan.addEventListener('click', simpanLembur);
-        btnFilter.addEventListener('click', tampilkanData);
-        btnExport.addEventListener('click', exportToExcel);
-        btnExportSummary.addEventListener('click', exportSummaryToExcel);
+        // Inisialisasi users
+        function initUsers() {
+            if (!localStorage.getItem('app_users')) {
+                localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS));
+            }
+        }
 
-        // Setting Event Listeners
-        btnAddPic.addEventListener('click', tambahPIC);
-        btnEditPic.addEventListener('click', editPasswordPIC);
-        btnDeletePic.addEventListener('click', hapusPIC);
-
-        // Backup & Restore Event Listeners
-        btnBackup.addEventListener('click', backupData);
-        btnRestore.addEventListener('click', restoreData);
-
-        // Sidebar Tab Navigation
-        sidebarMenuItems.forEach(item => {
-            item.addEventListener('click', () => {
-                const tabId = item.getAttribute('data-tab');
-                
-                // Update active class
-                sidebarMenuItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-
-                // Show selected tab
-                tabContents.forEach(tab => tab.classList.remove('active'));
-                document.getElementById(`tab-${tabId}`).classList.add('active');
-
-                // Load data if needed
-                if (tabId === 'summary') {
-                    loadSummaryData();
-                } else if (tabId === 'setting') {
-                    loadPICList();
-                }
-            });
-        });
-
-        // Generate Plant Dropdowns (inline)
+        // Generate Plant Dropdowns
         function generatePlantDropdowns() {
             const count = parseInt(totalPlant.value) || 1;
             plantDropdownsInline.innerHTML = '';
@@ -591,13 +661,15 @@
             const password = passwordInput.value;
 
             if (!username || !password) {
-                alert("Silakan isi semua field!");
+                loginError.textContent = "Silakan pilih nama dan masukkan password!";
                 return;
             }
 
+            initUsers();
             const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+
             if (!users[username] || users[username] !== password) {
-                alert("Username atau password salah!");
+                loginError.textContent = "Username atau password salah!";
                 return;
             }
 
@@ -618,41 +690,86 @@
             const user = localStorage.getItem('loggedInUser');
             if (!user) {
                 loginSection.classList.remove('hidden');
-                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
                 return;
             }
 
-            initUsers(); // Pastikan users ada
+            loginError.textContent = "";
+            loginSection.classList.add('hidden');
             namaUserSpan.textContent = user;
             namaUserTitle.textContent = user;
-            loginSection.classList.add('hidden');
 
-            // Tampilkan/Menyembunyikan menu admin
+            // Sembunyikan semua tab dulu
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+
             if (user === 'admin') {
-                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('admin-visible'));
+                // Tampilkan menu admin
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                document.getElementById('tab-rekap-admin').style.display = 'block';
+                tampilkanDataAdmin();
             } else {
-                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('admin-visible'));
+                // Tampilkan menu PIC
+                document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+                document.getElementById('tab-rekap-pic').style.display = 'block';
+                tampilkanDataPIC();
             }
 
             // Set default tanggal
             const today = new Date().toISOString().split('T')[0];
-            tanggalInput.value = today;
-            filterBulan.value = today.slice(0, 7);
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+            const oneMonthAgoStr = oneMonthAgo.toISOString().split('T')[0];
 
-            // Generate plant dropdowns
-            generatePlantDropdowns();
+            if (user !== 'admin') {
+                tanggalInput.value = today;
+                filterStartDate.value = oneMonthAgoStr;
+                filterEndDate.value = today;
+                generatePlantDropdowns();
+            }
 
-            // Tampilkan tab default
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.getElementById('tab-rekap').classList.add('active');
-            sidebarMenuItems.forEach(item => item.classList.remove('active'));
-            document.querySelector('[data-tab="rekap"]').classList.add('active');
+            adminFilterStartDate.value = oneMonthAgoStr;
+            adminFilterEndDate.value = today;
+            masterOutputStartDate.value = oneMonthAgoStr;
+            masterOutputEndDate.value = today;
+            masterSummaryStartDate.value = oneMonthAgoStr;
+            masterSummaryEndDate.value = today;
 
-            // Load data
-            tampilkanData();
+            // Load PIC list for setting
+            if (user === 'admin') {
+                loadPICList();
+                tampilkanDaftarPassword();
+            }
         }
 
-        // Simpan Data Lembur
+        // Tampilkan Daftar Password
+        function tampilkanDaftarPassword() {
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            passwordListBody.innerHTML = "";
+
+            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+            
+            picList.forEach(pic => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${pic}</strong></td>
+                    <td>${users[pic] || '-'}</td>
+                    <td><span style="color: green;">✅ Aktif</span></td>
+                `;
+                passwordListBody.appendChild(tr);
+            });
+        }
+
+        // Load PIC List for Setting
+        function loadPICList() {
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            const picList = Object.keys(users).filter(name => name !== 'admin');
+
+            editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
+            picList.forEach(name => {
+                editPicName.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+
+        // Simpan Data Lembur (PIC)
         function simpanLembur() {
             const user = localStorage.getItem('loggedInUser');
             const tanggal = tanggalInput.value;
@@ -664,7 +781,6 @@
             const uraian = uraianTugas.value;
             const now = new Date().toLocaleString('id-ID');
 
-            // Ambil semua pilihan plant
             const plantValues = [];
             document.querySelectorAll('.plant-select').forEach(select => {
                 if (select.value) plantValues.push(select.value);
@@ -676,19 +792,17 @@
                 return;
             }
 
-            // Hitung total jam
             const [h1, m1] = mulai.split(':').map(Number);
             const [h2, m2] = selesai.split(':').map(Number);
             let totalMenit = (h2 * 60 + m2) - (h1 * 60 + m1);
             if (totalMenit < 0) totalMenit += 24 * 60;
             const totalJam = (totalMenit / 60).toFixed(2);
 
-            // Ambil data dari localStorage
             const key = `lembur_${user}`;
             let data = JSON.parse(localStorage.getItem(key) || '[]');
 
-            // Tambahkan data baru
             data.push({
+                id: Date.now(), // Tambahkan ID unik untuk edit/delete
                 tanggal,
                 jamMulai: mulai,
                 jamSelesai: selesai,
@@ -702,12 +816,11 @@
                 updatedBy: user
             });
 
-            // Simpan kembali
             localStorage.setItem(key, JSON.stringify(data));
 
             pesan.textContent = "✅ Data lembur berhasil disimpan!";
             pesan.className = "success";
-            tampilkanData();
+            tampilkanDataPIC();
 
             // Reset form
             jamMulai.value = "";
@@ -717,23 +830,25 @@
             generatePlantDropdowns();
         }
 
-        // Tampilkan Data Lembur
-        function tampilkanData() {
+        // Tampilkan Data PIC
+        function tampilkanDataPIC() {
             const user = localStorage.getItem('loggedInUser');
-            const filter = filterBulan.value;
+            const startDate = filterStartDate.value;
+            const endDate = filterEndDate.value;
 
             const key = `lembur_${user}`;
             let data = JSON.parse(localStorage.getItem(key) || '[]');
 
-            if (filter) {
-                data = data.filter(item => item.tanggal.startsWith(filter));
+            if (startDate && endDate) {
+                data = data.filter(item => {
+                    return item.tanggal >= startDate && item.tanggal <= endDate;
+                });
             }
 
-            bodyTabel.innerHTML = "";
-            let total = 0;
-
-            // Sort by date descending
             data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            bodyTabelPic.innerHTML = "";
+            let total = 0;
 
             data.forEach(item => {
                 const tr = document.createElement('tr');
@@ -750,65 +865,293 @@
                     <td>${volumeText}</td>
                     <td>${item.uraianTugas || '-'}</td>
                     <td>${lastUpdateText}</td>
+                    <td>
+                        <button class="btn-small btn-edit" onclick="editDataPIC(${item.id})">Edit</button>
+                        <button class="btn-small btn-delete" onclick="deleteDataPIC(${item.id})">Delete</button>
+                    </td>
                 `;
-                bodyTabel.appendChild(tr);
+                bodyTabelPic.appendChild(tr);
                 total += parseFloat(item.totalJam);
             });
-
-            totalJamSpan.textContent = total.toFixed(2);
         }
 
-        // Load Summary Data (Admin Only)
-        function loadSummaryData() {
-            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
-            const summaryData = [];
+        // Edit Data PIC
+        function editDataPIC(id) {
+            const user = localStorage.getItem('loggedInUser');
+            const key = `lembur_${user}`;
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+            
+            const item = data.find(item => item.id === id);
+            if (!item) return;
+
+            // Isi form dengan data yang akan diedit
+            tanggalInput.value = item.tanggal;
+            jamMulai.value = item.jamMulai;
+            jamSelesai.value = item.jamSelesai;
+            totalProject.value = item.totalProject;
+            totalPlant.value = item.totalPlant;
+            volumeInput.value = item.volume || '';
+            uraianTugas.value = item.uraianTugas || '';
+
+            // Set plant dropdowns
+            setTimeout(() => {
+                generatePlantDropdowns();
+                const selects = document.querySelectorAll('.plant-select');
+                if (item.plant && selects.length === item.plant.length) {
+                    item.plant.forEach((plant, index) => {
+                        if (selects[index]) {
+                            selects[index].value = plant;
+                        }
+                    });
+                }
+            }, 100);
+
+            // Hapus data lama
+            data = data.filter(item => item.id !== id);
+            localStorage.setItem(key, JSON.stringify(data));
+
+            pesan.textContent = "📝 Silakan edit data dan klik Save untuk menyimpan perubahan.";
+            pesan.className = "success";
+        }
+
+        // Delete Data PIC
+        function deleteDataPIC(id) {
+            if (!confirm("Yakin ingin menghapus data ini?")) return;
+
+            const user = localStorage.getItem('loggedInUser');
+            const key = `lembur_${user}`;
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+            
+            data = data.filter(item => item.id !== id);
+            localStorage.setItem(key, JSON.stringify(data));
+
+            pesan.textContent = "🗑️ Data berhasil dihapus!";
+            pesan.className = "success";
+            tampilkanDataPIC();
+        }
+
+        // Tampilkan Data Admin
+        function tampilkanDataAdmin() {
+            const selectedPIC = adminFilterPic.value;
+            const startDate = adminFilterStartDate.value;
+            const endDate = adminFilterEndDate.value;
+
+            let allData = [];
+
+            if (selectedPIC === 'all') {
+                const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+                picList.forEach(pic => {
+                    const key = `lembur_${pic}`;
+                    const data = JSON.parse(localStorage.getItem(key) || '[]');
+                    data.forEach(item => {
+                        item.pic = pic;
+                        allData.push(item);
+                    });
+                });
+            } else {
+                const key = `lembur_${selectedPIC}`;
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                data.forEach(item => {
+                    item.pic = selectedPIC;
+                    allData.push(item);
+                });
+            }
+
+            if (startDate && endDate) {
+                allData = allData.filter(item => {
+                    return item.tanggal >= startDate && item.tanggal <= endDate;
+                });
+            }
+
+            allData.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            bodyTabelAdmin.innerHTML = "";
+
+            allData.forEach(item => {
+                const tr = document.createElement('tr');
+                const plantText = item.plant ? item.plant.join(', ') : '-';
+                const volumeText = item.volume || '-';
+                const lastUpdateText = item.lastUpdate || '-';
+
+                tr.innerHTML = `
+                    <td>${item.pic}</td>
+                    <td>${item.tanggal}</td>
+                    <td>${item.jamMulai}</td>
+                    <td>${item.jamSelesai}</td>
+                    <td>${item.totalJam} jam</td>
+                    <td>${plantText}</td>
+                    <td>${volumeText}</td>
+                    <td>${item.uraianTugas || '-'}</td>
+                    <td>${lastUpdateText}</td>
+                    <td>
+                        <button class="btn-small btn-edit" onclick="editDataAdmin(${item.id}, '${item.pic}')">Edit</button>
+                        <button class="btn-small btn-delete" onclick="deleteDataAdmin(${item.id}, '${item.pic}')">Delete</button>
+                    </td>
+                `;
+                bodyTabelAdmin.appendChild(tr);
+            });
+        }
+
+        // Edit Data Admin
+        function editDataAdmin(id, pic) {
+            const key = `lembur_${pic}`;
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+            
+            const item = data.find(item => item.id === id);
+            if (!item) return;
+
+            // Simpan data sementara ke localStorage
+            localStorage.setItem('temp_edit_data', JSON.stringify({
+                id,
+                pic,
+                data: item
+            }));
+
+            // Redirect ke halaman edit (bisa dibuat modal jika diperlukan)
+            alert("Fitur edit untuk admin bisa dikembangkan lebih lanjut. Data yang akan diedit: " + JSON.stringify(item));
+        }
+
+        // Delete Data Admin
+        function deleteDataAdmin(id, pic) {
+            if (!confirm("Yakin ingin menghapus data ini?")) return;
+
+            const key = `lembur_${pic}`;
+            let data = JSON.parse(localStorage.getItem(key) || '[]');
+            
+            data = data.filter(item => item.id !== id);
+            localStorage.setItem(key, JSON.stringify(data));
+
+            alert("Data berhasil dihapus!");
+            tampilkanDataAdmin();
+        }
+
+        // Tampilkan Master Output
+        function tampilkanMasterOutput() {
+            const selectedPIC = masterOutputPic.value;
+            const startDate = masterOutputStartDate.value;
+            const endDate = masterOutputEndDate.value;
+
+            let allData = [];
+
+            if (selectedPIC === 'all') {
+                const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+                picList.forEach(pic => {
+                    const key = `lembur_${pic}`;
+                    const data = JSON.parse(localStorage.getItem(key) || '[]');
+                    data.forEach(item => {
+                        item.pic = pic;
+                        allData.push(item);
+                    });
+                });
+            } else {
+                const key = `lembur_${selectedPIC}`;
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                data.forEach(item => {
+                    item.pic = selectedPIC;
+                    allData.push(item);
+                });
+            }
+
+            if (startDate && endDate) {
+                allData = allData.filter(item => {
+                    return item.tanggal >= startDate && item.tanggal <= endDate;
+                });
+            }
+
+            allData.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+
+            bodyMasterOutput.innerHTML = "";
+
+            allData.forEach(item => {
+                const tr = document.createElement('tr');
+                const plantText = item.plant ? item.plant.join(', ') : '-';
+                const volumeText = item.volume || '-';
+                const lastUpdateText = item.lastUpdate || '-';
+
+                tr.innerHTML = `
+                    <td>${item.pic}</td>
+                    <td>${item.tanggal}</td>
+                    <td>${item.jamMulai}</td>
+                    <td>${item.jamSelesai}</td>
+                    <td>${item.totalJam} jam</td>
+                    <td>${plantText}</td>
+                    <td>${volumeText}</td>
+                    <td>${item.uraianTugas || '-'}</td>
+                    <td>${lastUpdateText}</td>
+                `;
+                bodyMasterOutput.appendChild(tr);
+            });
+        }
+
+        // Tampilkan Master Summary
+        function tampilkanMasterSummary() {
+            const selectedPIC = masterSummaryPic.value;
+            const startDate = masterSummaryStartDate.value;
+            const endDate = masterSummaryEndDate.value;
+
+            let summaryData = [];
             let labels = [];
             let dataValues = [];
 
-            bodySummary.innerHTML = "";
+            const picList = selectedPIC === 'all' ? 
+                ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"] : 
+                [selectedPIC];
 
             picList.forEach(pic => {
                 const key = `lembur_${pic}`;
                 const data = JSON.parse(localStorage.getItem(key) || '[]');
-                const totalJam = data.reduce((sum, item) => sum + parseFloat(item.totalJam || 0), 0);
-                const lastUpdate = data.length > 0 ? data[0].lastUpdate : '-';
                 
+                let filteredData = data;
+                if (startDate && endDate) {
+                    filteredData = data.filter(item => {
+                        return item.tanggal >= startDate && item.tanggal <= endDate;
+                    });
+                }
+
+                const totalJam = filteredData.reduce((sum, item) => sum + parseFloat(item.totalJam || 0), 0);
+                const totalEntry = filteredData.length;
+                const avgJam = totalEntry > 0 ? (totalJam / totalEntry).toFixed(2) : 0;
+                const lastUpdate = data.length > 0 ? data[0].lastUpdate : '-';
+
                 summaryData.push({
-                    nama: pic,
+                    pic,
                     totalJam: totalJam.toFixed(2),
-                    totalEntry: data.length,
-                    lastUpdate: lastUpdate
+                    totalEntry,
+                    avgJam,
+                    lastUpdate
                 });
 
                 labels.push(pic);
                 dataValues.push(parseFloat(totalJam.toFixed(2)));
             });
 
-            // Render table
+            bodyMasterSummary.innerHTML = "";
+
             summaryData.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${item.nama}</td>
+                    <td>${item.pic}</td>
                     <td>${item.totalJam} jam</td>
                     <td>${item.totalEntry}</td>
+                    <td>${item.avgJam} jam/hari</td>
                     <td>${item.lastUpdate}</td>
                 `;
-                bodySummary.appendChild(tr);
+                bodyMasterSummary.appendChild(tr);
             });
 
             // Render Chart
-            renderSummaryChart(labels, dataValues);
+            renderMasterSummaryChart(labels, dataValues);
         }
 
-        // Render Chart
-        function renderSummaryChart(labels, data) {
-            const ctx = document.getElementById('summaryChart').getContext('2d');
+        // Render Master Summary Chart
+        function renderMasterSummaryChart(labels, data) {
+            const ctx = document.getElementById('masterSummaryChart').getContext('2d');
             
-            if (summaryChart) {
-                summaryChart.destroy();
+            if (masterSummaryChart) {
+                masterSummaryChart.destroy();
             }
 
-            summaryChart = new Chart(ctx, {
+            masterSummaryChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -826,6 +1169,11 @@
                 },
                 options: {
                     responsive: true,
+                    plugins: {
+                        datalabels: {
+                            display: false
+                        }
+                    },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -834,24 +1182,36 @@
                                 text: 'Total Jam Lembur'
                             }
                         }
+                    },
+                    onHover: (event, chartElement) => {
+                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
                     }
                 }
             });
-        }
 
-        // Load PIC List for Setting
-        function loadPICList() {
-            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
-            const picList = Object.keys(users).filter(name => name !== 'admin');
-
-            // Populate edit dropdown
-            editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
-            deletePicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
-
-            picList.forEach(name => {
-                editPicName.innerHTML += `<option value="${name}">${name}</option>`;
-                deletePicName.innerHTML += `<option value="${name}">${name}</option>`;
-            });
+            // Tambahkan label manual
+            setTimeout(() => {
+                const ctx = document.getElementById('masterSummaryChart').getContext('2d');
+                const chart = masterSummaryChart;
+                
+                if (chart) {
+                    chart.data.datasets.forEach((dataset, i) => {
+                        dataset.data.forEach((value, j) => {
+                            const meta = chart.getDatasetMeta(i);
+                            const bar = meta.data[j];
+                            if (bar) {
+                                const x = bar.x;
+                                const y = bar.y;
+                                
+                                ctx.fillStyle = '#000';
+                                ctx.font = 'bold 12px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(value, x, y - 10);
+                            }
+                        });
+                    });
+                }
+            }, 100);
         }
 
         // Tambah PIC Baru
@@ -878,12 +1238,10 @@
             settingPesan.textContent = `✅ PIC "${name}" berhasil ditambahkan!`;
             settingPesan.style.color = "green";
             
-            // Reset form
             newPicName.value = "";
             newPicPass.value = "";
-            
-            // Refresh PIC list
             loadPICList();
+            tampilkanDaftarPassword();
         }
 
         // Edit Password PIC
@@ -903,130 +1261,11 @@
             
             settingPesan.textContent = `✅ Password untuk "${name}" berhasil diubah!`;
             settingPesan.style.color = "green";
-            
-            // Reset form
             editPicPass.value = "";
+            tampilkanDaftarPassword();
         }
 
-        // Hapus PIC
-        function hapusPIC() {
-            const name = deletePicName.value;
-
-            if (!name) {
-                settingPesan.textContent = "Pilih PIC yang akan dihapus!";
-                settingPesan.style.color = "red";
-                return;
-            }
-
-            if (!confirm(`Yakin ingin menghapus PIC "${name}"? Semua data lemburnya juga akan terhapus!`)) {
-                return;
-            }
-
-            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
-            delete users[name];
-            localStorage.setItem('app_users', JSON.stringify(users));
-            
-            // Hapus data lembur
-            localStorage.removeItem(`lembur_${name}`);
-            
-            settingPesan.textContent = `✅ PIC "${name}" dan semua datanya berhasil dihapus!`;
-            settingPesan.style.color = "green";
-            
-            // Refresh PIC list
-            loadPICList();
-        }
-
-        // ============= BACKUP & RESTORE FUNCTIONS =============
-        function backupData() {
-            try {
-                const backupData = {
-                    timestamp: new Date().toISOString(),
-                    app_users: JSON.parse(localStorage.getItem('app_users') || '{}'),
-                    lembur_data: {}
-                };
-
-                // Backup semua data lembur
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.startsWith('lembur_')) {
-                        backupData.lembur_data[key] = JSON.parse(localStorage.getItem(key));
-                    }
-                }
-
-                // Convert to JSON string
-                const dataStr = JSON.stringify(backupData, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-                const url = URL.createObjectURL(dataBlob);
-
-                // Create download link
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `backup_lembur_${new Date().toISOString().slice(0,10)}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                backupRestorePesan.textContent = "✅ Backup berhasil! File telah didownload.";
-                backupRestorePesan.style.color = "green";
-            } catch (error) {
-                backupRestorePesan.textContent = "❌ Gagal backup: " + error.message;
-                backupRestorePesan.style.color = "red";
-            }
-        }
-
-        function restoreData() {
-            const file = fileRestore.files[0];
-            if (!file) {
-                backupRestorePesan.textContent = "❌ Pilih file backup terlebih dahulu!";
-                backupRestorePesan.style.color = "red";
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const backupData = JSON.parse(e.target.result);
-
-                    // Konfirmasi
-                    if (!confirm(`⚠️ Anda akan me-restore SEMUA data!\n\nBackup dibuat pada: ${backupData.timestamp}\n\nLanjutkan?`)) {
-                        return;
-                    }
-
-                    // Restore users
-                    localStorage.setItem('app_users', JSON.stringify(backupData.app_users));
-
-                    // Hapus semua data lembur yang ada
-                    for (let i = localStorage.length - 1; i >= 0; i--) {
-                        const key = localStorage.key(i);
-                        if (key.startsWith('lembur_')) {
-                            localStorage.removeItem(key);
-                        }
-                    }
-
-                    // Restore semua data lembur
-                    for (const key in backupData.lembur_data) {
-                        localStorage.setItem(key, JSON.stringify(backupData.lembur_data[key]));
-                    }
-
-                    backupRestorePesan.textContent = "✅ Restore berhasil! Refresh halaman untuk melihat perubahan.";
-                    backupRestorePesan.style.color = "green";
-
-                    // Auto refresh setelah 2 detik
-                    setTimeout(() => {
-                        location.reload();
-                    }, 2000);
-
-                } catch (error) {
-                    backupRestorePesan.textContent = "❌ Gagal restore: " + error.message;
-                    backupRestorePesan.style.color = "red";
-                }
-            };
-            reader.readAsText(file);
-        }
-        // ===================================================
-
-        // Export to Excel
+        // Export to Excel (PIC)
         function exportToExcel() {
             const user = localStorage.getItem('loggedInUser');
             const data = JSON.parse(localStorage.getItem(`lembur_${user}`) || '[]');
@@ -1036,7 +1275,6 @@
                 return;
             }
 
-            // Prepare data for Excel
             const ws_data = [
                 ["Tanggal", "Jam Mulai", "Jam Selesai", "Total Jam", "Total Project", "Total Plant", "Plant", "Volume (m³)", "Uraian Tugas", "Last Update", "Updated By"]
             ];
@@ -1057,59 +1295,138 @@
                 ]);
             });
 
-            // Create worksheet and workbook
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Rekap Lembur");
-
-            // Export
             XLSX.writeFile(wb, `Rekap_Lembur_${user}_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // Export Summary to Excel
-        function exportSummaryToExcel() {
-            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
-            const summaryData = [];
+        // Export Master Output to Excel
+        function exportMasterOutputToExcel() {
+            const selectedPIC = masterOutputPic.value;
+            const startDate = masterOutputStartDate.value;
+            const endDate = masterOutputEndDate.value;
 
-            picList.forEach(pic => {
-                const key = `lembur_${pic}`;
-                const data = JSON.parse(localStorage.getItem(key) || '[]');
-                const totalJam = data.reduce((sum, item) => sum + parseFloat(item.totalJam || 0), 0);
-                const lastUpdate = data.length > 0 ? data[0].lastUpdate : '-';
-                
-                summaryData.push({
-                    nama: pic,
-                    totalJam: totalJam.toFixed(2),
-                    totalEntry: data.length,
-                    lastUpdate: lastUpdate
+            let allData = [];
+
+            if (selectedPIC === 'all') {
+                const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+                picList.forEach(pic => {
+                    const key = `lembur_${pic}`;
+                    const data = JSON.parse(localStorage.getItem(key) || '[]');
+                    data.forEach(item => {
+                        item.pic = pic;
+                        allData.push(item);
+                    });
                 });
-            });
+            } else {
+                const key = `lembur_${selectedPIC}`;
+                const data = JSON.parse(localStorage.getItem(key) || '[]');
+                data.forEach(item => {
+                    item.pic = selectedPIC;
+                    allData.push(item);
+                });
+            }
 
-            // Prepare data for Excel
+            if (startDate && endDate) {
+                allData = allData.filter(item => {
+                    return item.tanggal >= startDate && item.tanggal <= endDate;
+                });
+            }
+
+            if (allData.length === 0) {
+                alert("Tidak ada data untuk di-export!");
+                return;
+            }
+
             const ws_data = [
-                ["Nama PIC", "Total Jam Lembur", "Total Entry", "Last Update"]
+                ["PIC", "Tanggal", "Jam Mulai", "Jam Selesai", "Total Jam", "Plant", "Volume (m³)", "Uraian Tugas", "Last Update"]
             ];
 
-            summaryData.forEach(item => {
+            allData.forEach(item => {
                 ws_data.push([
-                    item.nama,
+                    item.pic,
+                    item.tanggal,
+                    item.jamMulai,
+                    item.jamSelesai,
                     item.totalJam,
-                    item.totalEntry,
-                    item.lastUpdate
+                    item.plant ? item.plant.join(', ') : '',
+                    item.volume || '',
+                    item.uraianTugas || '',
+                    item.lastUpdate || ''
                 ]);
             });
 
-            // Create worksheet and workbook
             const ws = XLSX.utils.aoa_to_sheet(ws_data);
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Summary Lembur");
-
-            // Export
-            XLSX.writeFile(wb, `Summary_Lembur_${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.utils.book_append_sheet(wb, ws, "Master Output");
+            XLSX.writeFile(wb, `Master_Output_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        // Cek login saat halaman dibuka
-        window.addEventListener('DOMContentLoaded', () => {
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Login & Logout
+            btnLogin.addEventListener('click', login);
+            btnLogout.addEventListener('click', logout);
+
+            // PIC Mode
+            btnSimpan.addEventListener('click', simpanLembur);
+            btnFilter.addEventListener('click', tampilkanDataPIC);
+            btnExport.addEventListener('click', exportToExcel);
+
+            // Admin Mode
+            btnAdminFilter.addEventListener('click', tampilkanDataAdmin);
+
+            // Master Output
+            btnMasterOutputFilter.addEventListener('click', tampilkanMasterOutput);
+            btnMasterOutputExport.addEventListener('click', exportMasterOutputToExcel);
+
+            // Master Summary
+            btnMasterSummaryFilter.addEventListener('click', tampilkanMasterSummary);
+
+            // Master Setting
+            btnAddPic.addEventListener('click', tambahPIC);
+            btnEditPic.addEventListener('click', editPasswordPIC);
+
+            // Sidebar Navigation
+            sidebarMenuItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const tabId = item.getAttribute('data-tab');
+                    
+                    // Hide all tabs
+                    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+                    
+                    // Show selected tab
+                    if (tabId === 'rekap') {
+                        const user = localStorage.getItem('loggedInUser');
+                        if (user === 'admin') {
+                            document.getElementById('tab-rekap-admin').style.display = 'block';
+                            tampilkanDataAdmin();
+                        } else {
+                            document.getElementById('tab-rekap-pic').style.display = 'block';
+                            tampilkanDataPIC();
+                        }
+                    } else if (tabId === 'master') {
+                        // Show first master tab by default
+                        document.getElementById('tab-master-output').style.display = 'block';
+                        tampilkanMasterOutput();
+                    } else if (tabId.startsWith('master-')) {
+                        document.getElementById(`tab-${tabId}`).style.display = 'block';
+                        if (tabId === 'master-output') tampilkanMasterOutput();
+                        if (tabId === 'master-summary') tampilkanMasterSummary();
+                        if (tabId === 'master-setting') {
+                            loadPICList();
+                            tampilkanDaftarPassword();
+                        }
+                    }
+
+                    // Update active class
+                    sidebarMenuItems.forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                });
+            });
+
+            // Initialize
             initUsers();
             tampilkanAplikasi();
         });
