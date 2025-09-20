@@ -990,8 +990,17 @@ sidebar.classList.add('hidden');
   editModal.addEventListener('click', (e)=>{ if(e.target === editModal) closeEditModal(); });
   editSave.addEventListener('click', (e)=>{ e.preventDefault(); saveEditedData(); });
 
-  // if user already logged in, show app
-  if(localStorage.getItem('loggedInUser')) showAppAfterLogin();
+  // Hapus status login sebelum memeriksanya (agar selalu diminta login)
+  localStorage.removeItem('loggedInUser');
+  // Cek apakah masih ada pengguna yang login (harusnya tidak)
+  if(localStorage.getItem('loggedInUser')) {
+    // Jika masih ada (misalnya karena sesuatu yang tidak normal), panggil showAppAfterLogin
+    showAppAfterLogin();
+} else {
+    // Jika tidak ada, pastikan sidebar disembunyikan dan login section ditampilkan
+    sidebar.classList.add('hidden');
+    loginSection.classList.remove('hidden');
+}
 
   // reposition toggle on window resize
   window.addEventListener('resize', ()=> setTimeout(positionToggleButton, 80));
