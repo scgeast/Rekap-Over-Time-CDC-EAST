@@ -9,19 +9,41 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+  <!-- Sidebar -->
   <aside id="sidebar" class="hidden">
-    <!-- Sidebar content -->
+    <div class="sidebar-header">
+      <h3>Menu</h3>
+      <button class="ghost" onclick="logoutUser()">Logout</button>
+    </div>
+    <ul class="sidebar-menu">
+      <li onclick="showAppFor(localStorage.getItem('logged_in_user'))">🏠 Dashboard</li>
+    </ul>
   </aside>
 
+  <!-- Toggle Sidebar Button -->
   <button id="toggle-btn" class="toggle-btn">
     <span></span><span></span><span></span>
   </button>
 
+  <!-- Main Content -->
   <main class="main">
     <div class="container" id="app-container">
+
+      <!-- Login Box -->
       <section id="login-box">
-        <!-- Login form -->
+        <h2>Login</h2>
+        <div class="form-group">
+          <label class="small">Username</label>
+          <input type="text" id="username" />
+        </div>
+        <div class="form-group">
+          <label class="small">Password</label>
+          <input type="password" id="password" />
+        </div>
+        <button class="primary" onclick="handleLogin()">Login</button>
       </section>
+
+      <!-- App Placeholder -->
       <section id="app-placeholder" class="hidden">
         <div class="header-flex">
           <h2 id="page-title">📝 Input & Rekap Lembur - <span id="page-user">Nama</span></h2>
@@ -29,10 +51,14 @@
         </div>
         <div id="content-area"></div>
       </section>
+
     </div>
   </main>
 
+  <!-- Toast Notification -->
   <div id="toast" class="toast"></div>
+
+  <!-- Script -->
   <script src="script.js"></script>
 </body>
 </html>
