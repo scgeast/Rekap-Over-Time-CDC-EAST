@@ -275,9 +275,15 @@ function logout(){
 }
 
 /* === Event Binding === */
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', () => {
   initUserStore();
   SIDEBAR.classList.add('hidden');
+  APP_PLACEHOLDER.classList.add('hidden');
+  LOGIN_BOX.style.display = 'block';
+
+  const logged = localStorage.getItem('logged_in_user');
+  if(logged) showAppFor(logged);
+});
 
   const logged = localStorage.getItem('logged_in_user');
   if(logged) showAppFor(logged);
@@ -310,8 +316,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(tab === 'master-output') renderMasterOutput();
     if(tab === 'master-summary') renderMasterSummary();
     if(tab === 'master-setting') renderMasterSetting();
+  function renderMasterOutput(){
+    CONTENT.innerHTML = `
+      <h2>📁 Master Output</h2>
+      <button id="btn-export-all" class="primary" style="margin-bottom:14px;">Export Semua Data ke Excel</button>
+      <button id="btn-export-json" class="ghost">Backup JSON</button>
+    `;
+
+    document.getElementById("btn-export-all").addEventListener(...); // sudah benar
+    document.getElementById("btn-export-json").addEventListener(() => {
+      const allData = {};
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith("data_")) {
+          allData[k] = JSON.parse(localStorage.getItem(k));
+      }
+    });
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "backup_lembur.json";
+    a.click();
   });
-});
+}
 
 /* Expose Core */
 window.appCore = { showToast, SIDEBAR, APP_PLACEHOLDER, TOTAL_JAM_EL };
