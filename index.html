@@ -44,23 +44,23 @@
   .sidebar-menu li{ padding:10px 14px; cursor:pointer; border-radius:6px; display:flex; gap:8px; align-items:center; }
   .sidebar-menu li.active, .sidebar-menu li:hover{ background:rgba(255,255,255,0.06); }
 
-  /* Toggle button (positioned to the right edge of sidebar) */
+  /* Toggle button (always visible, black icon, no background) */
 #toggle-sidebar {
   position: absolute;
   top: 12px;
-  /* left will be updated by JS so button appears at right edge of sidebar */
+  /* left will be updated by JS */
   z-index: 1100;
-  background: none; /* Hapus latar belakang */
-  color: #000; /* Warna teks hitam */
-  border: none;
+  background: none;     /* Tidak ada latar belakang */
+  color: #000;          /* Warna ikon hitam */
+  border: none;         /* Tidak ada border */
   padding: 8px 10px;
   cursor: pointer;
-  font-size: 1.2em;
+  font-size: 1.3em;     /* Sedikit lebih besar untuk visibilitas */
 }
 
-/* Opsional: Tambahkan sedikit efek saat di-hover */
+/* Optional: Add subtle hover effect */
 #toggle-sidebar:hover {
-  color: #333; /* Sedikit lebih gelap */
+  color: #333; /* Slightly darker on hover */
 }
 
   /* Main content */
@@ -925,9 +925,10 @@ function exportMasterOutputToExcel(){
 document.addEventListener('DOMContentLoaded', ()=>{
   initUsers();
 
-  // hide sidebar initially (before login) but ensure toggle visible when logged in
-  sidebar.classList.add('hidden');
-  toggleBtn.classList.add('hidden');
+  // hide sidebar initially (before login)
+sidebar.classList.add('hidden');
+// JANGAN sembunyikan toggle button, biarkan selalu terlihat
+// toggleBtn.classList.add('hidden');
 
   // generate initial plant selects
   generatePlantDropdowns();
