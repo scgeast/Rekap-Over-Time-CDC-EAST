@@ -64,6 +64,9 @@
       background: none;
       cursor: pointer;
     }
+    <label>Filter Tanggal:</label>
+    <input type="date" id="filterDate" onchange="filterByDate('${user}')">
+    }
     .toggle-btn span {
       display: block;
       width: 100%;
@@ -527,6 +530,7 @@ function renderMasterOutput(){
   CONTENT.innerHTML = `
     <h2>📁 Master Output</h2>
     <button id="btn-export-all" class="primary" style="margin-bottom:14px;">
+    <button id="btn-export-json" class="ghost">Backup JSON</button>
       Export Semua Data ke Excel
     </button>
   `;
@@ -660,6 +664,41 @@ function deleteUser(user){
   localStorage.setItem("app_users", JSON.stringify(users));
   appCore.showToast("User dihapus","error");
   renderUserTable();
+}
+document.getElementById("btn-export-json").addEventListener("click", () => {
+  const allData = {};
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith("data_")) {
+      allData[k] = JSON.parse(localStorage.getItem(k));
+    }
+  });
+  const blob = new Blob([JSON.stringify(allData, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "backup_lembur.json";
+  a.click();
+  });
+function filterByDate(user) {
+  const selectedDate = document.getElementById("filterDate").value;
+  const data = JSON.parse(localStorage.getItem("data_" + user) || "[]");
+  const filtered = data.filter(d => d.tgl === selectedDate);
+  const tb = document.getElementById("pic-tbody");
+  tb.innerHTML = "";
+  let totalJamSum = 0;
+  filtered.forEach(d => {
+    totalJamSum += parseFloat(d.totalJam);
+    let tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${d.tgl}</td>
+      <td>${d.jamMulai} - ${d.jamSelesai}</td>
+      <td>${d.plants.join(", ")}</td>
+      <td>${d.uraian || ""}</td>
+      <td>${d.totalJam}</td>
+    `;
+    tb.appendChild(tr);
+  });
+  appCore.TOTAL_JAM_EL.textContent = "Total Jam: " + totalJamSum.toFixed(2);
 }
   </script>
 </body>
