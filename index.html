@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Rekapan Lembur</title>
+    <title>Rekap Over Time CDC EAST</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -56,10 +56,6 @@
         .sidebar-menu li i {
             margin-right: 10px;
         }
-        .submenu {
-            padding-left: 30px;
-            background: rgba(0,0,0,0.2);
-        }
         /* Main Content */
         .main-content {
             flex: 1;
@@ -110,16 +106,6 @@
         button:hover {
             background: #2980b9;
         }
-        .btn-small {
-            padding: 8px 12px;
-            font-size: 14px;
-        }
-        .btn-edit {
-            background: #f39c12;
-        }
-        .btn-delete {
-            background: #e74c3c;
-        }
         .logout-btn {
             background: var(--danger);
             margin-top: 20px;
@@ -147,6 +133,33 @@
             color: var(--success);
             font-weight: bold;
         }
+        /* Horizontal Form Layout */
+        .row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        .col {
+            flex: 1;
+        }
+        .col-auto {
+            width: auto;
+        }
+        .col-shrink {
+            flex: 0 0 auto;
+            width: auto;
+        }
+        .plant-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .plant-label {
+            font-weight: bold;
+            min-width: 70px;
+        }
         /* Filter Bar */
         .filter-bar {
             background: #f8f9fa;
@@ -161,6 +174,11 @@
         .filter-item {
             flex: 1;
             min-width: 200px;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
         }
         /* Chart Container */
         .chart-container {
@@ -190,6 +208,17 @@
         .password-table th {
             background: #3498db;
             color: white;
+        }
+        /* Total Jam Display */
+        .total-jam-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-left: 20px;
+            padding: 5px 15px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            display: inline-block;
         }
         /* Responsive */
         @media (max-width: 768px) {
@@ -245,9 +274,9 @@
         <div class="container">
             <!-- Login Section -->
             <div id="login-section">
-                <h1>🔐 Login Rekapan Lembur</h1>
+                <h1 style="font-size: 1.5em;">🔐 Rekap Over Time CDC EAST</h1>
                 <div class="form-group">
-                    <label for="username">Nama PIC / Admin:</label>
+                    <label for="username" style="font-size: 0.9em;">Nama PIC / Admin:</label>
                     <select id="username" required>
                         <option value="">-- Pilih Nama --</option>
                         <option value="Agung Setyawan">Agung Setyawan</option>
@@ -259,7 +288,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="password">Password:</label>
+                    <label for="password" style="font-size: 0.9em;">Password:</label>
                     <input type="password" id="password" placeholder="Masukkan password" required>
                 </div>
                 <button id="btn-login">Login</button>
@@ -268,7 +297,7 @@
 
             <!-- Tab 1: Rekap OT (PIC Mode) -->
             <div id="tab-rekap-pic" class="tab-content">
-                <h1>📝 Input & Rekap Lembur - <span id="nama-user-title"></span></h1>
+                <h1>📝 Input & Rekap Lembur - <span id="nama-user-title"></span> <span id="total-jam-display" class="total-jam-display">0.00 jam</span></h1>
                 
                 <h2>Input Lembur Hari Ini</h2>
                 <div class="row">
@@ -310,11 +339,15 @@
                     <textarea id="uraian-tugas" rows="3" placeholder="Deskripsikan tugas lembur..."></textarea>
                 </div>
 
-                <button id="btn-simpan" class="btn-small">Save</button>
-                <button id="btn-export" class="btn-small" style="background: #27ae60; margin-left: 10px;">📊 Export Excel</button>
+                <button id="btn-simpan" style="width: 100%; padding: 12px;">Save</button>
                 <p id="pesan"></p>
 
                 <h2 class="section-header">Output Rekapan</h2>
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                    <button id="btn-export" class="btn-excel" style="padding: 8px 12px; font-size: 14px; display: inline-block; margin-right: 10px;">
+                        📊 Export Excel
+                    </button>
+                </div>
                 
                 <div class="filter-bar">
                     <div class="filter-item">
@@ -341,7 +374,6 @@
                             <th>Volume (m³)</th>
                             <th>Uraian Tugas</th>
                             <th>Last Update</th>
-                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="body-tabel-pic">
@@ -426,7 +458,9 @@
                     </div>
                     <div class="filter-item" style="flex: 0 0 auto;">
                         <button id="btn-master-output-filter" style="width: auto; padding: 10px 20px;">Terapkan Filter</button>
-                        <button id="btn-master-output-export" class="btn-small" style="background: #27ae60; margin-left: 10px;">📊 Export Excel</button>
+                        <button id="btn-master-output-export" class="btn-excel" style="padding: 8px 12px; font-size: 14px; display: inline-block; margin-left: 10px;">
+                            📊 Export Excel
+                        </button>
                     </div>
                 </div>
 
@@ -564,7 +598,6 @@
         const passwordInput = document.getElementById('password');
         const btnLogin = document.getElementById('btn-login');
         const btnLogout = document.getElementById('btn-logout');
-        const loginError = document.getElementById('login-error');
 
         // Rekap Tab Elements (PIC)
         const tanggalInput = document.getElementById('tanggal');
@@ -582,6 +615,7 @@
         const filterEndDate = document.getElementById('filter-end-date');
         const btnFilter = document.getElementById('btn-filter');
         const bodyTabelPic = document.getElementById('body-tabel-pic');
+        const totalJamDisplay = document.getElementById('total-jam-display');
 
         // Rekap Tab Elements (Admin)
         const adminFilterPic = document.getElementById('admin-filter-pic');
@@ -631,13 +665,6 @@
         // List Plant
         const plants = ["Denpasar2", "Gianyar", "Manyar", "Manukan", "Kediri", "Gempol", "Krian"];
 
-        // Inisialisasi users
-        function initUsers() {
-            if (!localStorage.getItem('app_users')) {
-                localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS));
-            }
-        }
-
         // Generate Plant Dropdowns
         function generatePlantDropdowns() {
             const count = parseInt(totalPlant.value) || 1;
@@ -661,15 +688,13 @@
             const password = passwordInput.value;
 
             if (!username || !password) {
-                loginError.textContent = "Silakan pilih nama dan masukkan password!";
+                document.getElementById('login-error').textContent = "Silakan isi semua field!";
                 return;
             }
 
-            initUsers();
             const users = JSON.parse(localStorage.getItem('app_users') || '{}');
-
             if (!users[username] || users[username] !== password) {
-                loginError.textContent = "Username atau password salah!";
+                document.getElementById('login-error').textContent = "Username atau password salah!";
                 return;
             }
 
@@ -693,7 +718,6 @@
                 return;
             }
 
-            loginError.textContent = "";
             loginSection.classList.add('hidden');
             namaUserSpan.textContent = user;
             namaUserTitle.textContent = user;
@@ -740,35 +764,6 @@
             }
         }
 
-        // Tampilkan Daftar Password
-        function tampilkanDaftarPassword() {
-            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
-            passwordListBody.innerHTML = "";
-
-            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
-            
-            picList.forEach(pic => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${pic}</strong></td>
-                    <td>${users[pic] || '-'}</td>
-                    <td><span style="color: green;">✅ Aktif</span></td>
-                `;
-                passwordListBody.appendChild(tr);
-            });
-        }
-
-        // Load PIC List for Setting
-        function loadPICList() {
-            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
-            const picList = Object.keys(users).filter(name => name !== 'admin');
-
-            editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
-            picList.forEach(name => {
-                editPicName.innerHTML += `<option value="${name}">${name}</option>`;
-            });
-        }
-
         // Simpan Data Lembur (PIC)
         function simpanLembur() {
             const user = localStorage.getItem('loggedInUser');
@@ -802,7 +797,7 @@
             let data = JSON.parse(localStorage.getItem(key) || '[]');
 
             data.push({
-                id: Date.now(), // Tambahkan ID unik untuk edit/delete
+                id: Date.now(),
                 tanggal,
                 jamMulai: mulai,
                 jamSelesai: selesai,
@@ -848,8 +843,8 @@
             data.sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
 
             bodyTabelPic.innerHTML = "";
-            let total = 0;
 
+            let total = 0;
             data.forEach(item => {
                 const tr = document.createElement('tr');
                 const plantText = item.plant ? item.plant.join(', ') : '-';
@@ -865,69 +860,13 @@
                     <td>${volumeText}</td>
                     <td>${item.uraianTugas || '-'}</td>
                     <td>${lastUpdateText}</td>
-                    <td>
-                        <button class="btn-small btn-edit" onclick="editDataPIC(${item.id})">Edit</button>
-                        <button class="btn-small btn-delete" onclick="deleteDataPIC(${item.id})">Delete</button>
-                    </td>
                 `;
                 bodyTabelPic.appendChild(tr);
                 total += parseFloat(item.totalJam);
             });
-        }
 
-        // Edit Data PIC
-        function editDataPIC(id) {
-            const user = localStorage.getItem('loggedInUser');
-            const key = `lembur_${user}`;
-            let data = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            const item = data.find(item => item.id === id);
-            if (!item) return;
-
-            // Isi form dengan data yang akan diedit
-            tanggalInput.value = item.tanggal;
-            jamMulai.value = item.jamMulai;
-            jamSelesai.value = item.jamSelesai;
-            totalProject.value = item.totalProject;
-            totalPlant.value = item.totalPlant;
-            volumeInput.value = item.volume || '';
-            uraianTugas.value = item.uraianTugas || '';
-
-            // Set plant dropdowns
-            setTimeout(() => {
-                generatePlantDropdowns();
-                const selects = document.querySelectorAll('.plant-select');
-                if (item.plant && selects.length === item.plant.length) {
-                    item.plant.forEach((plant, index) => {
-                        if (selects[index]) {
-                            selects[index].value = plant;
-                        }
-                    });
-                }
-            }, 100);
-
-            // Hapus data lama
-            data = data.filter(item => item.id !== id);
-            localStorage.setItem(key, JSON.stringify(data));
-
-            pesan.textContent = "📝 Silakan edit data dan klik Save untuk menyimpan perubahan.";
-            pesan.className = "success";
-        }
-
-        // Delete Data PIC
-        function deleteDataPIC(id) {
-            if (!confirm("Yakin ingin menghapus data ini?")) return;
-
-            const user = localStorage.getItem('loggedInUser');
-            const key = `lembur_${user}`;
-            let data = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            data = data.filter(item => item.id !== id);
-            localStorage.setItem(key, JSON.stringify(data));
-
-            pesan.textContent = "🗑️ Data berhasil dihapus!";
-            pesan.className = "success";
-            tampilkanDataPIC();
+            // Update total jam display
+            totalJamDisplay.textContent = `${total.toFixed(2)} jam`;
         }
 
         // Tampilkan Data Admin
@@ -990,39 +929,6 @@
                 `;
                 bodyTabelAdmin.appendChild(tr);
             });
-        }
-
-        // Edit Data Admin
-        function editDataAdmin(id, pic) {
-            const key = `lembur_${pic}`;
-            let data = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            const item = data.find(item => item.id === id);
-            if (!item) return;
-
-            // Simpan data sementara ke localStorage
-            localStorage.setItem('temp_edit_data', JSON.stringify({
-                id,
-                pic,
-                data: item
-            }));
-
-            // Redirect ke halaman edit (bisa dibuat modal jika diperlukan)
-            alert("Fitur edit untuk admin bisa dikembangkan lebih lanjut. Data yang akan diedit: " + JSON.stringify(item));
-        }
-
-        // Delete Data Admin
-        function deleteDataAdmin(id, pic) {
-            if (!confirm("Yakin ingin menghapus data ini?")) return;
-
-            const key = `lembur_${pic}`;
-            let data = JSON.parse(localStorage.getItem(key) || '[]');
-            
-            data = data.filter(item => item.id !== id);
-            localStorage.setItem(key, JSON.stringify(data));
-
-            alert("Data berhasil dihapus!");
-            tampilkanDataAdmin();
         }
 
         // Tampilkan Master Output
@@ -1139,7 +1045,6 @@
                 bodyMasterSummary.appendChild(tr);
             });
 
-            // Render Chart
             renderMasterSummaryChart(labels, dataValues);
         }
 
@@ -1182,36 +1087,9 @@
                                 text: 'Total Jam Lembur'
                             }
                         }
-                    },
-                    onHover: (event, chartElement) => {
-                        event.native.target.style.cursor = chartElement[0] ? 'pointer' : 'default';
                     }
                 }
             });
-
-            // Tambahkan label manual
-            setTimeout(() => {
-                const ctx = document.getElementById('masterSummaryChart').getContext('2d');
-                const chart = masterSummaryChart;
-                
-                if (chart) {
-                    chart.data.datasets.forEach((dataset, i) => {
-                        dataset.data.forEach((value, j) => {
-                            const meta = chart.getDatasetMeta(i);
-                            const bar = meta.data[j];
-                            if (bar) {
-                                const x = bar.x;
-                                const y = bar.y;
-                                
-                                ctx.fillStyle = '#000';
-                                ctx.font = 'bold 12px Arial';
-                                ctx.textAlign = 'center';
-                                ctx.fillText(value, x, y - 10);
-                            }
-                        });
-                    });
-                }
-            }, 100);
         }
 
         // Tambah PIC Baru
@@ -1263,6 +1141,35 @@
             settingPesan.style.color = "green";
             editPicPass.value = "";
             tampilkanDaftarPassword();
+        }
+
+        // Tampilkan Daftar Password
+        function tampilkanDaftarPassword() {
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            passwordListBody.innerHTML = "";
+
+            const picList = ["Agung Setyawan", "Fahmi Ardiansyah", "Drajat Triono", "Wiyanto", "Nur Fauziah"];
+            
+            picList.forEach(pic => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${pic}</strong></td>
+                    <td>${users[pic] || '-'}</td>
+                    <td><span style="color: green;">✅ Aktif</span></td>
+                `;
+                passwordListBody.appendChild(tr);
+            });
+        }
+
+        // Load PIC List for Setting
+        function loadPICList() {
+            const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+            const picList = Object.keys(users).filter(name => name !== 'admin');
+
+            editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
+            picList.forEach(name => {
+                editPicName.innerHTML += `<option value="${name}">${name}</option>`;
+            });
         }
 
         // Export to Excel (PIC)
@@ -1410,14 +1317,16 @@
                         // Show first master tab by default
                         document.getElementById('tab-master-output').style.display = 'block';
                         tampilkanMasterOutput();
-                    } else if (tabId.startsWith('master-')) {
-                        document.getElementById(`tab-${tabId}`).style.display = 'block';
-                        if (tabId === 'master-output') tampilkanMasterOutput();
-                        if (tabId === 'master-summary') tampilkanMasterSummary();
-                        if (tabId === 'master-setting') {
-                            loadPICList();
-                            tampilkanDaftarPassword();
-                        }
+                    } else if (tabId === 'master-output') {
+                        document.getElementById('tab-master-output').style.display = 'block';
+                        tampilkanMasterOutput();
+                    } else if (tabId === 'master-summary') {
+                        document.getElementById('tab-master-summary').style.display = 'block';
+                        tampilkanMasterSummary();
+                    } else if (tabId === 'master-setting') {
+                        document.getElementById('tab-master-setting').style.display = 'block';
+                        loadPICList();
+                        tampilkanDaftarPassword();
                     }
 
                     // Update active class
@@ -1430,6 +1339,13 @@
             initUsers();
             tampilkanAplikasi();
         });
+
+        // Inisialisasi users
+        function initUsers() {
+            if (!localStorage.getItem('app_users')) {
+                localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS));
+            }
+        }
     </script>
 </body>
 </html>
