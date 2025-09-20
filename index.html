@@ -19,7 +19,6 @@
       --bg: #f4f6f9;
       --sidebar-width: 250px;
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: "Segoe UI", Tahoma, Arial, sans-serif;
@@ -29,7 +28,6 @@
       min-height: 100vh;
       position: relative;
     }
-
     /* Sidebar */
     #sidebar {
       width: var(--sidebar-width);
@@ -49,7 +47,6 @@
     .sidebar-menu { list-style: none; padding: 8px 0; margin: 0; display: block; }
     .sidebar-menu li { padding: 10px 12px; border-radius: 6px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
     .sidebar-menu li:hover, .sidebar-menu li.active { background: rgba(255,255,255,0.06); }
-
     /* Toggle (selalu tampil, warna hitam) */
     .toggle-btn {
       position: fixed;
@@ -72,13 +69,11 @@
       width: 100%;
       height: 3px;
       border-radius: 2px;
-      background: #000; /* hitam */
+      background: #000;
     }
-
     /* Main */
     .main { flex: 1; padding: 28px; overflow: auto; }
     .container { max-width: 1200px; margin: 0 auto; background: white; padding: 22px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.06); }
-
     /* Login box */
     #login-box { max-width: 420px; margin: 90px auto; padding: 22px; background: #fff; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.06);}
     #login-box h1 { text-align: center; margin-bottom: 12px; font-size: 1.05rem; }
@@ -89,22 +84,18 @@
     }
     button.primary { background: var(--primary); color: #fff; font-weight: 700; border: 0; cursor: pointer; }
     button.ghost { background: transparent; border: 1px solid #d7dbe0; color: var(--text); }
-
     .header-flex { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
     #total-jam { background: #eef6ff; color: #15395b; padding: 8px 12px; border-radius: 8px; font-weight: 700; }
-
     /* Toast */
     .toast { position: fixed; top: 20px; right: 20px; padding: 12px 16px; border-radius: 10px; color: #fff; box-shadow: 0 8px 28px rgba(7,12,34,0.12); transform: translateY(-8px); opacity: 0; transition: all .28s ease; z-index: 9999; font-weight: 600; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.success { background: var(--success); }
     .toast.info    { background: var(--primary); }
     .toast.error   { background: var(--danger); }
-
     /* Table */
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ddd; padding: 6px; font-size: 0.9rem; }
     th { background: #f0f2f5; }
-
     @media (max-width: 900px) {
       #login-box { margin: 40px 12px; }
       #sidebar { position: fixed; height: 100vh; left: 0; top: 0; }
@@ -114,9 +105,7 @@
 <body>
   <!-- Sidebar -->
   <aside id="sidebar" class="hidden">
-    <div class="sidebar-header">
-      <h3>📂 Menu</h3>
-    </div>
+    <div class="sidebar-header"><h3>📂 Menu</h3></div>
     <ul class="sidebar-menu" id="sidebar-menu">
       <li data-tab="rekap" class="active">📋 Rekap Over Time</li>
       <li data-tab="master" class="admin-only">📁 Master</li>
@@ -132,11 +121,9 @@
     </div>
   </aside>
 
-  <!-- Toggle (selalu tampil) -->
+  <!-- Toggle -->
   <button id="toggle-btn" class="toggle-btn">
-    <span></span>
-    <span></span>
-    <span></span>
+    <span></span><span></span><span></span>
   </button>
 
   <!-- Main -->
@@ -167,7 +154,6 @@
         </div>
         <p id="login-error" style="margin-top:10px;color:#c0392b;display:none;"></p>
       </section>
-
       <!-- App content -->
       <section id="app-placeholder" class="hidden">
         <div class="header-flex">
@@ -183,13 +169,10 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    /* === Masukkan semua JavaScript panjang (Part 1–5) dari versi terakhir yang aku kasih === */
-    /* Perbedaannya: hapus function positionToggle dan pemanggilannya */
-    /* Karena toggle sudah fixed, jadi aman */
-
-    // (tempelkan di sini JS Part 1–5 yang sudah aku rapikan sebelumnya)
+    /* === Semua JavaScript panjang aku masukkan di sini === */
+    // (karena keterbatasan ruang di satu balasan, aku bisa lanjutkan khusus bagian JS panjang di balasan berikutnya beb)
   /* ================================
-   Part 1 - Core (Login, Sidebar, Toast)
+   Part A - Core (Login, Sidebar, Toast)
 =================================== */
 
 const SIDEBAR        = document.getElementById('sidebar');
@@ -217,6 +200,7 @@ const DEFAULT_USERS = {
   "admin"            : "123456789"
 };
 
+/* === Init User Store === */
 function initUserStore(){
   if(!localStorage.getItem('app_users')){
     localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS));
@@ -234,13 +218,6 @@ function showToast(message, type = 'info', ms = 3000){
   }, ms);
 }
 
-/* === Toggle Position === */
-function positionToggle(){
-  const rect = SIDEBAR.getBoundingClientRect();
-  let leftPos = rect.width < 10 ? 8 : rect.width - 14;
-  TOGGLE.style.left = leftPos + 'px';
-}
-
 /* === Login & Logout === */
 function showAppFor(user){
   USER_DISPLAY.textContent = user;
@@ -256,7 +233,6 @@ function showAppFor(user){
   }
 
   SIDEBAR.classList.remove('collapsed');
-  positionToggle();
   showToast('Selamat datang, ' + user, 'success', 1600);
 
   // Default tab
@@ -299,7 +275,6 @@ function logout(){
 document.addEventListener('DOMContentLoaded', ()=>{
   initUserStore();
   SIDEBAR.classList.add('hidden');
-  setTimeout(positionToggle, 80);
 
   const logged = localStorage.getItem('logged_in_user');
   if(logged) showAppFor(logged);
@@ -307,10 +282,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   TOGGLE.addEventListener('click', e=>{
     e.stopPropagation();
     SIDEBAR.classList.toggle('collapsed');
-    setTimeout(positionToggle, 60);
   });
-
-  window.addEventListener('resize', ()=> setTimeout(positionToggle, 120));
 
   BTN_LOGIN.addEventListener('click', login);
   BTN_CLEAR.addEventListener('click', ()=>{
@@ -339,11 +311,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
 });
 
 /* Expose Core */
-window.appCore = { showToast, positionToggle, SIDEBAR, APP_PLACEHOLDER, TOTAL_JAM_EL };
-
+window.appCore = { showToast, SIDEBAR, APP_PLACEHOLDER, TOTAL_JAM_EL };
 /* ================================
-   Part 2 - PIC Input & Rekap
+   Part B - PIC Input & Rekap
 =================================== */
+
 function renderPIC(user){
   CONTENT.innerHTML = `
     <div id="pic-form">
@@ -394,6 +366,7 @@ function renderPIC(user){
   const totalPlantInput = document.getElementById("pic-totalPlant");
   const plantContainer  = document.getElementById("pic-plant-container");
 
+  // plant input dinamis
   totalPlantInput.addEventListener("input",()=>{
     plantContainer.innerHTML = "";
     let total = parseInt(totalPlantInput.value)||0;
@@ -406,6 +379,7 @@ function renderPIC(user){
     }
   });
 
+  // simpan data
   document.getElementById("btn-pic-save").addEventListener("click",()=>{
     const tgl       = document.getElementById("pic-tanggal").value;
     const jamMulai  = document.getElementById("pic-jamMulai").value;
@@ -433,6 +407,7 @@ function renderPIC(user){
     renderPICTable(user);
   });
 
+  // export excel (data user)
   document.getElementById("btn-pic-export").addEventListener("click",()=>{
     let data = JSON.parse(localStorage.getItem("data_"+user)||"[]");
     if(data.length===0){ appCore.showToast("Tidak ada data","error"); return; }
@@ -471,10 +446,10 @@ function renderPICTable(user){
 
   appCore.TOTAL_JAM_EL.textContent = "Total Jam: " + totalJamSum.toFixed(2);
 }
-
 /* ================================
-   Part 3 - Admin Monitoring
+   Part C - Admin Monitoring
 =================================== */
+
 function renderAdmin(){
   CONTENT.innerHTML = `
     <h2>📊 Monitoring Rekap Semua User</h2>
@@ -539,18 +514,21 @@ function deleteAdmin(user, idx){
   if(!confirm("Hapus data ini?")) return;
   let data = JSON.parse(localStorage.getItem("data_"+user)||"[]");
   data.splice(idx,1);
-  localStorage.setItem("data_"+user", JSON.stringify(data));
+  localStorage.setItem("data_"+user, JSON.stringify(data));
   appCore.showToast("Data berhasil dihapus","error");
   renderAdminTable();
 }
-
 /* ================================
-   Part 4 - Master Output & Summary
+   Part D - Master Output & Summary
 =================================== */
+
+// Master Output (Export semua data)
 function renderMasterOutput(){
   CONTENT.innerHTML = `
     <h2>📁 Master Output</h2>
-    <button id="btn-export-all">Export Semua Data ke Excel</button>
+    <button id="btn-export-all" class="primary" style="margin-bottom:14px;">
+      Export Semua Data ke Excel
+    </button>
   `;
 
   document.getElementById("btn-export-all").addEventListener("click",()=>{
@@ -558,7 +536,7 @@ function renderMasterOutput(){
     Object.keys(localStorage).forEach(k=>{
       if(!k.startsWith("data_")) return;
       const user = k.replace("data_","");
-      let data   = JSON.parse(localStorage.getItem(k)||"[]");
+      let data = JSON.parse(localStorage.getItem(k)||"[]");
       data.forEach(d=>{
         ws_data.push([user, d.tgl, d.jamMulai+"-"+d.jamSelesai, d.plants.join(", "), d.uraian||"", d.totalJam]);
       });
@@ -572,14 +550,18 @@ function renderMasterOutput(){
   });
 }
 
+// Master Summary (Chart.js)
 function renderMasterSummary(){
   CONTENT.innerHTML = `
     <h2>📊 Summary Lembur per User</h2>
-    <canvas id="summary-chart" height="100"></canvas>
+    <canvas id="summary-chart" height="120"></canvas>
   `;
 
   const ctx = document.getElementById("summary-chart").getContext("2d");
-  let labels=[],totals=[];
+
+  // kumpulkan total jam per user
+  let labels = [];
+  let totals = [];
   Object.keys(localStorage).forEach(k=>{
     if(!k.startsWith("data_")) return;
     const user = k.replace("data_","");
@@ -593,7 +575,11 @@ function renderMasterSummary(){
     type:"bar",
     data:{
       labels:labels,
-      datasets:[{label:"Total Jam",data:totals,backgroundColor:"#3498db"}]
+      datasets:[{
+        label:"Total Jam",
+        data:totals,
+        backgroundColor:"#3498db"
+      }]
     },
     options:{
       responsive:true,
@@ -602,47 +588,46 @@ function renderMasterSummary(){
     }
   });
 }
-
 /* ================================
-   Part 5 - Setting User
+   Part E - Setting User
 =================================== */
+
 function renderMasterSetting(){
   CONTENT.innerHTML = `
     <h2>⚙️ Setting User</h2>
-    <div style="margin-bottom:14px;">
-      <input type="text" id="new-username" placeholder="Username baru" style="margin-right:6px;">
-      <input type="text" id="new-password" placeholder="Password" style="margin-right:6px;">
-      <button id="btn-add-user">Tambah User</button>
+    <div style="margin-bottom:12px;">
+      <input id="new-user" placeholder="Username baru" style="width:40%;padding:8px;">
+      <input id="new-pass" placeholder="Password baru" type="password" style="width:40%;padding:8px;">
+      <button id="btn-add-user" class="primary" style="width:15%;">Tambah</button>
     </div>
     <table>
       <thead>
-        <tr>
-          <th>Username</th>
-          <th>Password</th>
-          <th>Aksi</th>
-        </tr>
+        <tr><th>Username</th><th>Password</th><th>Aksi</th></tr>
       </thead>
-      <tbody id="setting-tbody"></tbody>
+      <tbody id="user-tbody"></tbody>
     </table>
   `;
 
-  renderUserTable();
   document.getElementById("btn-add-user").addEventListener("click",()=>{
-    const uname = document.getElementById("new-username").value.trim();
-    const pass  = document.getElementById("new-password").value.trim();
-    if(!uname || !pass){ appCore.showToast("Isi username & password","error"); return; }
+    let u = document.getElementById("new-user").value.trim();
+    let p = document.getElementById("new-pass").value.trim();
+    if(!u || !p){ appCore.showToast("Isi username & password","error"); return; }
     let users = JSON.parse(localStorage.getItem("app_users")||"{}");
-    if(users[uname]){ appCore.showToast("User sudah ada","error"); return; }
-    users[uname] = pass;
+    if(users[u]){ appCore.showToast("User sudah ada","error"); return; }
+    users[u] = p;
     localStorage.setItem("app_users", JSON.stringify(users));
     appCore.showToast("User ditambahkan","success");
     renderUserTable();
+    document.getElementById("new-user").value="";
+    document.getElementById("new-pass").value="";
   });
+
+  renderUserTable();
 }
 
 function renderUserTable(){
   let users = JSON.parse(localStorage.getItem("app_users")||"{}");
-  const tb  = document.getElementById("setting-tbody");
+  const tb = document.getElementById("user-tbody");
   tb.innerHTML = "";
   Object.keys(users).forEach(u=>{
     let tr = document.createElement("tr");
@@ -659,7 +644,7 @@ function renderUserTable(){
 }
 
 function editUser(user){
-  let users  = JSON.parse(localStorage.getItem("app_users")||"{}");
+  let users = JSON.parse(localStorage.getItem("app_users")||"{}");
   const newP = prompt("Password baru untuk "+user, users[user]);
   if(newP===null) return;
   users[user] = newP;
@@ -676,7 +661,6 @@ function deleteUser(user){
   appCore.showToast("User dihapus","error");
   renderUserTable();
 }
-
-</script>
+  </script>
 </body>
 </html>
