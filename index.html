@@ -110,7 +110,6 @@
   #plant-dropdowns-inline{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
   /* modal */
   .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:2000; }
-  .modal-backdrop.show{ display:flex; }
   .modal{ background:#fff; padding:18px; border-radius:10px; width:720px; max-width:95%; box-shadow:0 12px 30px rgba(0,0,0,0.2); }
   .modal h3{ margin-bottom:10px; }
   /* responsive */
@@ -176,7 +175,6 @@
       <button id="btn-login">Login</button>
       <p id="login-error" style="color:#c0392b;margin-top:8px;"></p>
     </div>
-
     <!-- MODAL: GANTI PASSWORD UNTUK PIC -->
     <div id="change-password-modal" class="modal-backdrop" aria-hidden="true">
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
@@ -200,7 +198,6 @@
         <p id="change-password-message" style="margin-top:8px; text-align: center;"></p>
       </div>
     </div>
-
     <!-- TAB: PIC -->
     <div id="tab-rekap-pic" class="tab-content hidden">
       <div class="header-flex">
@@ -374,7 +371,7 @@
       </div>
       <h3>🔐 Daftar Password Semua PIC</h3>
       <table class="password-table">
-        <thead><tr><th>Nama PIC</th><th>Password</th><th>Akses</th></tr></thead>
+        <thead><tr><th>Nama PIC</th><th>Password</th><th>Akses</th><th>Aksi</th></tr></thead>
         <tbody id="password-list-body"></tbody>
       </table>
       <div id="setting-pesan" style="margin-top:12px;"></div>
@@ -420,7 +417,7 @@ const toggleBtn = document.getElementById('toggle-sidebar');
 const loginSection = document.getElementById('login-section');
 const namaUserSpan = document.getElementById('nama-user');
 const namaUserTitle = document.getElementById('nama-user-title');
-const usernameSelect = document.getElementById('username');
+const usernameSelect = document.getElementById('username'); // <-- SUDAH DIDEFINISIKAN
 const passwordInput = document.getElementById('password');
 const btnLogin = document.getElementById('btn-login');
 const btnLogout = document.getElementById('btn-logout');
@@ -478,7 +475,6 @@ const editVolume = document.getElementById('edit-volume');
 const editUraian = document.getElementById('edit-uraian');
 const editCancel = document.getElementById('edit-cancel');
 const editSave = document.getElementById('edit-save');
-
 // DOM untuk fitur ganti password PIC
 const btnChangePasswordPic = document.getElementById('btn-change-password-pic');
 const changePasswordModal = document.getElementById('change-password-modal');
@@ -488,7 +484,6 @@ const confirmNewPasswordInput = document.getElementById('confirm-new-password');
 const changePasswordCancel = document.getElementById('change-password-cancel');
 const changePasswordSave = document.getElementById('change-password-save');
 const changePasswordMessage = document.getElementById('change-password-message');
-
 let masterSummaryChart = null;
 let editingContext = null; // {id, pic}
 /* ========== Helpers ========== */
@@ -565,7 +560,7 @@ function showAppAfterLogin(){
     document.querySelectorAll('.admin-only').forEach(e => e.style.display = 'block');
     tabRekapAdmin.classList.remove('hidden');
     tampilkanDataAdmin();
-    loadPICList();
+    loadPICList(); // <-- PASTIKAN DIPANGGIL DI SINI
     tampilkanDaftarPassword();
     // Sembunyikan tombol ganti password untuk PIC jika user adalah admin
     btnChangePasswordPic.style.display = 'none';
@@ -762,7 +757,7 @@ function tampilkanMasterOutput(){
   let all = [];
   pics.forEach(pic=>{
     const data = JSON.parse(localStorage.getItem(`lembur_${pic}`) || '[]');
-    data.forEach(d=>{ const copy = Object.assign({},d); copy.pic=pic; all.push(copy);});
+    data.forEach(d=>{ const copy = Object.assign({}, d); copy.pic=pic; all.push(copy);});
   });
   if(start && end) all = all.filter(d=>d.tanggal >= start && d.tanggal <= end);
   all.sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
@@ -812,15 +807,40 @@ function renderMasterSummaryChart(labels, data){
   });
 }
 /* ========== SETTING (users) ========== */
+// ========== DIPERBAIKI: Fungsi loadPICList() yang sudah diupdate ==========
 function loadPICList(){
   const users = JSON.parse(localStorage.getItem('app_users')||'{}');
   const list = Object.keys(users).filter(n=>n!=='admin');
+
+  // Update dropdown untuk edit password PIC
   editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
   list.forEach(n => editPicName.innerHTML += `<option value="${n}">${n}</option>`);
-  // admin filter options refresh
-  adminFilterPic.innerHTML = '<option value="all">Select All</option>'; masterOutputPic.innerHTML = '<option value="all">Select All</option>'; masterSummaryPic.innerHTML = '<option value="all">Select All</option>';
-  list.forEach(n=>{ adminFilterPic.innerHTML += `<option>${n}</option>`; masterOutputPic.innerHTML += `<option>${n}</option>`; masterSummaryPic.innerHTML += `<option>${n}</option>`; });
+
+  // Update dropdown untuk filter Admin dan Master
+  adminFilterPic.innerHTML = '<option value="all">Select All</option>';
+  masterOutputPic.innerHTML = '<option value="all">Select All</option>';
+  masterSummaryPic.innerHTML = '<option value="all">Select All</option>';
+  list.forEach(n=>{
+    adminFilterPic.innerHTML += `<option>${n}</option>`;
+    masterOutputPic.innerHTML += `<option>${n}</option>`;
+    masterSummaryPic.innerHTML += `<option>${n}</option>`;
+  });
+
+  // ========== TAMBHAHAN BARU: Update dropdown di halaman Login ==========
+  // Bersihkan dan isi ulang dropdown username di halaman login
+  usernameSelect.innerHTML = '<option value="">-- Pilih Nama --</option>';
+  list.forEach(n => {
+    usernameSelect.innerHTML += `<option value="${n}">${n}</option>`;
+  });
+
+  // Jika ada user yang sedang login, pastikan nama mereka tetap ada di dropdown
+  const loggedInUser = localStorage.getItem('loggedInUser');
+  if (loggedInUser && list.includes(loggedInUser)) {
+    usernameSelect.value = loggedInUser;
+  }
 }
+// ========== AKHIR DIPERBAIKI ==========
+
 function tambahPIC(){
   const name = newPicName.value.trim(); const pass = newPicPass.value.trim();
   if(!name || !pass){ settingPesan.textContent='Nama & password harus diisi!'; settingPesan.style.color='red'; return; }
@@ -829,25 +849,94 @@ function tambahPIC(){
   users[name] = pass; localStorage.setItem('app_users', JSON.stringify(users));
   settingPesan.textContent = `✅ PIC "${name}" ditambahkan.`; settingPesan.style.color='green';
   newPicName.value=''; newPicPass.value='';
-  loadPICList(); tampilkanDaftarPassword();
+  loadPICList(); // <-- PANGGIL ULANG SETELAH TAMBAH
+  tampilkanDaftarPassword();
 }
+
 function editPasswordPIC(){
   const name = editPicName.value; const pass = editPicPass.value.trim();
   if(!name || !pass){ settingPesan.textContent='Pilih PIC & isi password baru!'; settingPesan.style.color='red'; return; }
   const users = JSON.parse(localStorage.getItem('app_users')||'{}'); users[name] = pass; localStorage.setItem('app_users', JSON.stringify(users));
   settingPesan.textContent = `✅ Password ${name} berhasil diubah.`; settingPesan.style.color='green';
-  editPicPass.value=''; tampilkanDaftarPassword();
+  editPicPass.value=''; 
+  loadPICList(); // <-- PANGGIL ULANG SETELAH EDIT PASSWORD
+  tampilkanDaftarPassword();
 }
+
 function tampilkanDaftarPassword(){
   const users = JSON.parse(localStorage.getItem('app_users')||'{}');
   passwordListBody.innerHTML = '';
   const list = Object.keys(users).filter(n=>n!=='admin');
   list.forEach(n=>{
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><strong>${n}</strong></td><td>${users[n]}</td><td><span style="color:green">✅ Aktif</span></td>`;
+    // Tambahkan tombol Edit dan Delete di kolom terakhir
+    tr.innerHTML = `
+      <td><strong>${n}</strong></td>
+      <td>${users[n]}</td>
+      <td><span style="color:green">✅ Aktif</span></td>
+      <td>
+        <button onclick="editPICName('${n}')" style="background:#f39c12; color:white; border:none; padding:2px 6px; margin-right:4px; border-radius:4px; font-size:0.85em;">✏️ Edit</button>
+        <button onclick="deletePIC('${n}')" style="background:var(--danger); color:white; border:none; padding:2px 6px; border-radius:4px; font-size:0.85em;">🗑️ Delete</button>
+      </td>`;
     passwordListBody.appendChild(tr);
   });
 }
+
+// Fungsi Baru: Hapus PIC
+function deletePIC(picName) {
+  if (!confirm(`Yakin ingin menghapus PIC "${picName}"? Tindakan ini akan menghapus semua data lembur miliknya dan tidak dapat dibatalkan.`)) {
+    return;
+  }
+  const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+  // Hapus dari daftar user
+  delete users[picName];
+  localStorage.setItem('app_users', JSON.stringify(users));
+  // Hapus data lembur milik PIC tersebut
+  localStorage.removeItem(`lembur_${picName}`);
+  // Beri notifikasi dan refresh daftar
+  settingPesan.textContent = `✅ PIC "${picName}" dan semua datanya berhasil dihapus.`;
+  settingPesan.style.color = 'green';
+  loadPICList(); // <-- PANGGIL ULANG SETELAH HAPUS
+  tampilkanDaftarPassword();
+}
+
+// Fungsi Baru: Edit Nama PIC
+function editPICName(oldName) {
+  const newName = prompt("Masukkan nama PIC baru:", oldName);
+  if (newName === null) return; // User cancel
+  if (newName.trim() === "") {
+    alert("Nama PIC tidak boleh kosong.");
+    return;
+  }
+  const users = JSON.parse(localStorage.getItem('app_users') || '{}');
+  // Cek apakah nama baru sudah ada (kecuali jika itu nama lama)
+  if (newName !== oldName && users[newName]) {
+    alert(`Nama PIC "${newName}" sudah ada. Silakan pilih nama lain.`);
+    return;
+  }
+  // Ambil password dari user lama
+  const userPassword = users[oldName];
+  // Buat user baru dengan nama baru
+  users[newName] = userPassword;
+  // Hapus user lama
+  delete users[oldName];
+  // Simpan daftar user yang baru
+  localStorage.setItem('app_users', JSON.stringify(users));
+  // Pindahkan data lembur (jika ada)
+  const oldDataKey = `lembur_${oldName}`;
+  const oldData = localStorage.getItem(oldDataKey);
+  if (oldData) {
+    const newDataKey = `lembur_${newName}`;
+    localStorage.setItem(newDataKey, oldData);
+    localStorage.removeItem(oldDataKey);
+  }
+  // Beri notifikasi dan refresh daftar
+  settingPesan.textContent = `✅ Nama PIC berhasil diubah dari "${oldName}" menjadi "${newName}".`;
+  settingPesan.style.color = 'green';
+  loadPICList(); // <-- PANGGIL ULANG SETELAH EDIT NAMA
+  tampilkanDaftarPassword();
+}
+
 /* ========== EXPORT MASTER OUTPUT ========== */
 function exportMasterOutputToExcel(){
   const sel = masterOutputPic.value || 'all'; const start = masterOutputStartDate.value; const end = masterOutputEndDate.value;
@@ -875,12 +964,10 @@ function openChangePasswordModal() {
   changePasswordModal.classList.add('show');
   changePasswordModal.style.display = 'flex';
 }
-
 function closeChangePasswordModal() {
   changePasswordModal.classList.remove('show');
   changePasswordModal.style.display = 'none';
 }
-
 function saveNewPassword() {
   const currentUser = localStorage.getItem('loggedInUser');
   if (!currentUser || currentUser === 'admin') {
@@ -888,42 +975,34 @@ function saveNewPassword() {
     changePasswordMessage.style.color = 'red';
     return;
   }
-
   const currentPass = currentPasswordInput.value;
   const newPass = newPasswordInput.value;
   const confirmPass = confirmNewPasswordInput.value;
-
   // Validasi input
   if (!currentPass || !newPass || !confirmPass) {
     changePasswordMessage.textContent = 'Semua field harus diisi.';
     changePasswordMessage.style.color = 'red';
     return;
   }
-
   if (newPass !== confirmPass) {
     changePasswordMessage.textContent = 'Password baru dan konfirmasi tidak cocok.';
     changePasswordMessage.style.color = 'red';
     return;
   }
-
   // Ambil daftar user
   const users = JSON.parse(localStorage.getItem('app_users') || '{}');
-
   // Verifikasi password lama
   if (users[currentUser] !== currentPass) {
     changePasswordMessage.textContent = 'Password lama salah.';
     changePasswordMessage.style.color = 'red';
     return;
   }
-
   // Update password
   users[currentUser] = newPass;
   localStorage.setItem('app_users', JSON.stringify(users));
-
   // Beri notifikasi sukses
   changePasswordMessage.textContent = '✅ Password berhasil diubah!';
   changePasswordMessage.style.color = 'green';
-
   // Tutup modal setelah 1.5 detik
   setTimeout(() => {
     closeChangePasswordModal();
@@ -953,7 +1032,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
   btnMasterSummaryFilter.addEventListener('click', tampilkanMasterSummary);
   btnAddPic.addEventListener('click', tambahPIC);
   btnEditPic.addEventListener('click', editPasswordPIC);
-
   // Event untuk tombol ganti password PIC
   btnChangePasswordPic.addEventListener('click', openChangePasswordModal);
   changePasswordCancel.addEventListener('click', closeChangePasswordModal);
@@ -962,20 +1040,16 @@ document.addEventListener('DOMContentLoaded', ()=>{
   changePasswordModal.addEventListener('click', (e) => {
     if (e.target === changePasswordModal) closeChangePasswordModal();
   });
-
   // totalPlant change -> regenerate plant inputs
   totalPlant.addEventListener('input', generatePlantDropdowns);
-
   // sidebar toggle logic: collapse / expand, and reposition toggle
   toggleBtn.addEventListener('click', ()=>{
     sidebar.classList.toggle('collapsed');
     // reposition button so it remains visible after collapse
     setTimeout(positionToggleButton, 50);
   });
-
   // initial position of toggle (even hidden) so when shown it's at right place
   setTimeout(positionToggleButton, 100);
-
   // sidebar menu navigation - DIPERBAIKI UNTUK HANDLE FOLDER & SUBMENU
   document.querySelectorAll('.sidebar-menu li').forEach(item => {
     item.addEventListener('click', (e) => {
@@ -985,7 +1059,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
         const folderId = item.getAttribute('data-folder');
         const submenu = document.getElementById(folderId);
         const isCurrentlyOpen = !submenu.classList.contains('hidden');
-
         // Tutup semua folder lainnya terlebih dahulu
         document.querySelectorAll('.folder-toggle').forEach(otherItem => {
           if (otherItem !== item) {
@@ -997,7 +1070,6 @@ document.addEventListener('DOMContentLoaded', ()=>{
             }
           }
         });
-
         // Toggle folder yang diklik
         if (isCurrentlyOpen) {
           submenu.classList.add('hidden');
@@ -1008,14 +1080,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
         }
         return; // Jangan lanjutkan ke logika tab
       }
-
       // Jika bukan folder, lakukan navigasi tab seperti biasa
       const tab = item.getAttribute('data-tab');
       if (!tab) return; // Jika tidak ada data-tab, jangan lakukan apa-apa
-
       // hide all tab contents
       document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-
       // show selected tab
       if (tab === 'rekap') {
         const user = localStorage.getItem('loggedInUser');
@@ -1034,24 +1103,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
         tampilkanMasterSummary();
       } else if (tab === 'master-setting') {
         tabMasterSetting.classList.remove('hidden');
-        loadPICList();
+        loadPICList(); // <-- PASTIKAN DIPANGGIL SAAT BUKA SETTING
         tampilkanDaftarPassword();
       }
-
       // Update active state
       document.querySelectorAll('.sidebar-menu li').forEach(i => i.classList.remove('active'));
       item.classList.add('active');
-
       // reposition toggle in case sidebar changed size
       setTimeout(positionToggleButton, 50);
     });
   });
-
   // modal events
   editCancel.addEventListener('click', (e)=>{ e.preventDefault(); closeEditModal(); });
   editModal.addEventListener('click', (e)=>{ if(e.target === editModal) closeEditModal(); });
   editSave.addEventListener('click', (e)=>{ e.preventDefault(); saveEditedData(); });
-
   // Cek apakah masih ada pengguna yang login (harusnya tidak, karena sudah dihapus di atas)
   if(localStorage.getItem('loggedInUser')) {
     showAppAfterLogin();
@@ -1059,11 +1124,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     // Pastikan login section ditampilkan
     loginSection.classList.remove('hidden');
   }
-
   // reposition toggle on window resize
   window.addEventListener('resize', ()=> setTimeout(positionToggleButton, 80));
 });
-
 /* Expose some functions to global for inline onclick handlers */
 window.editDataAdmin = editDataAdmin;
 window.deleteDataAdmin = deleteDataAdmin;
@@ -1073,6 +1136,9 @@ window.tampilkanDataAdmin = tampilkanDataAdmin;
 window.tampilkanDataPIC = tampilkanDataPIC;
 window.tampilkanMasterOutput = tampilkanMasterOutput;
 window.tampilkanMasterSummary = tampilkanMasterSummary;
+// Tambahkan fungsi baru di sini
+window.editPICName = editPICName;
+window.deletePIC = deletePIC;
 </script>
 </body>
 </html>
