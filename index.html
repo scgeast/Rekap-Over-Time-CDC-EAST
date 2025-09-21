@@ -160,12 +160,7 @@
         <label for="username">Nama PIC / Admin:</label>
         <select id="username">
           <option value="">-- Pilih Nama --</option>
-          <option value="Agung Setyawan">Agung Setyawan</option>
-          <option value="Fahmi Ardiansyah">Fahmi Ardiansyah</option>
-          <option value="Drajat Triono">Drajat Triono</option>
-          <option value="Wiyanto">Wiyanto</option>
-          <option value="Nur Fauziah">Nur Fauziah</option>
-          <option value="admin">Admin</option>
+          <!-- SEMUA OPTION STATIS DIHAPUS! -->
         </select>
       </div>
       <div class="form-group">
@@ -402,14 +397,7 @@
 /* =======================
    Data & DOM references
    ======================= */
-const DEFAULT_USERS = {
-  "Agung Setyawan":"12345",
-  "Fahmi Ardiansyah":"67890",
-  "Drajat Triono":"45678",
-  "Wiyanto":"23456",
-  "Nur Fauziah":"54321",
-  "admin":"123456789"
-};
+// KITA HAPUS DEFAULT_USERS KARENA KITA TIDAK MENGGUNAKAN OPTION STATIS LAGI
 const plantOptions = ["Denpasar2","Gianyar","Manyar","Manukan","Kediri","Gempol","Krian"];
 /* DOM */
 const sidebar = document.getElementById('sidebar');
@@ -487,7 +475,20 @@ const changePasswordMessage = document.getElementById('change-password-message')
 let masterSummaryChart = null;
 let editingContext = null; // {id, pic}
 /* ========== Helpers ========== */
-function initUsers(){ if(!localStorage.getItem('app_users')) localStorage.setItem('app_users', JSON.stringify(DEFAULT_USERS)); }
+function initUsers(){ 
+  if(!localStorage.getItem('app_users')) {
+    // Hanya buat user default jika belum ada sama sekali
+    const defaultUsers = {
+      "Agung Setyawan":"12345",
+      "Fahmi Ardiansyah":"67890",
+      "Drajat Triono":"45678",
+      "Wiyanto":"23456",
+      "Nur Fauziah":"54321",
+      "admin":"123456789"
+    };
+    localStorage.setItem('app_users', JSON.stringify(defaultUsers));
+  }
+}
 /* generate plant selects according to totalPlant */
 function generatePlantDropdowns(){
   plantDropdownsInline.innerHTML = '';
@@ -1020,6 +1021,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   localStorage.removeItem('loggedInUser');
   // generate initial plant selects
   generatePlantDropdowns();
+  // 👇 👇 👇 TAMBHAHAN KRITIS: Isi dropdown login sejak awal, sebelum login!
+  loadPICList(); 
   // event bindings
   btnLogin.addEventListener('click', login);
   btnLogout.addEventListener('click', logout);
