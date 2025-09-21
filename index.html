@@ -119,6 +119,53 @@
     #toggle-sidebar{ top:10px; }
     #login-section{ margin:40px 16px; }
   }
+
+  /* ============ PENYESUAIAN MOBILE TAMBAHAN ============ */
+  @media (max-width: 768px) {
+    /* Perbesar font dan padding di form */
+    input, select, textarea, button {
+      font-size: 16px; /* Penting: mencegah zoom otomatis saat fokus */
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* Perbesar tombol utama */
+    button {
+      padding: 14px;
+      font-size: 16px;
+    }
+
+    /* Perbesar judul */
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+    h3 { font-size: 1.1rem; }
+
+    /* Perbesar toggle sidebar untuk mudah diklik */
+    #toggle-sidebar {
+      padding: 12px;
+      font-size: 1.5em;
+    }
+
+    /* Perbesar item menu sidebar */
+    .sidebar-menu li {
+      padding: 14px;
+      font-size: 1rem;
+    }
+
+    /* Perbesar modal */
+    .modal {
+      margin: 10px;
+      padding: 16px;
+    }
+
+    /* Pastikan tabel bisa di-scroll horizontal jika terlalu lebar */
+    table {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+  }
+  /* ============ AKHIR PENYESUAIAN MOBILE ============ */
 </style>
 </head>
 <body>
