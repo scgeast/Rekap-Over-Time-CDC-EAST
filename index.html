@@ -811,34 +811,38 @@ function renderMasterSummaryChart(labels, data){
 // ========== DIPERBAIKI: Fungsi loadPICList() yang sudah diupdate ==========
 function loadPICList(){
   const users = JSON.parse(localStorage.getItem('app_users')||'{}');
-  const list = Object.keys(users).filter(n=>n!=='admin');
+  
+  // Dapatkan daftar semua user (termasuk admin)
+  const allUsers = Object.keys(users);
 
-  // Update dropdown untuk edit password PIC
+  // Daftar hanya PIC (tanpa admin)
+  const picList = allUsers.filter(n=>n!=='admin');
+
+  // ========== 1. UPDATE DROPDOWN LOGIN (TETAP SERTAKAN ADMIN) ==========
+  usernameSelect.innerHTML = '<option value="">-- Pilih Nama --</option>';
+  allUsers.forEach(n => {
+    usernameSelect.innerHTML += `<option value="${n}">${n}</option>`;
+  });
+  // Jika ada user yang sedang login, pastikan nama mereka tetap ada di dropdown
+  const loggedInUser = localStorage.getItem('loggedInUser');
+  if (loggedInUser && allUsers.includes(loggedInUser)) {
+    usernameSelect.value = loggedInUser;
+  }
+
+  // ========== 2. UPDATE DROPDOWN UNTUK PIC (HANYA PIC, TANPA ADMIN) ==========
+  // Dropdown untuk edit password PIC
   editPicName.innerHTML = '<option value="">-- Pilih PIC --</option>';
-  list.forEach(n => editPicName.innerHTML += `<option value="${n}">${n}</option>`);
+  picList.forEach(n => editPicName.innerHTML += `<option value="${n}">${n}</option>`);
 
-  // Update dropdown untuk filter Admin dan Master
+  // Dropdown untuk filter Admin dan Master
   adminFilterPic.innerHTML = '<option value="all">Select All</option>';
   masterOutputPic.innerHTML = '<option value="all">Select All</option>';
   masterSummaryPic.innerHTML = '<option value="all">Select All</option>';
-  list.forEach(n=>{
+  picList.forEach(n=>{
     adminFilterPic.innerHTML += `<option>${n}</option>`;
     masterOutputPic.innerHTML += `<option>${n}</option>`;
     masterSummaryPic.innerHTML += `<option>${n}</option>`;
   });
-
-  // ========== TAMBHAHAN BARU: Update dropdown di halaman Login ==========
-  // Bersihkan dan isi ulang dropdown username di halaman login
-  usernameSelect.innerHTML = '<option value="">-- Pilih Nama --</option>';
-  list.forEach(n => {
-    usernameSelect.innerHTML += `<option value="${n}">${n}</option>`;
-  });
-
-  // Jika ada user yang sedang login, pastikan nama mereka tetap ada di dropdown
-  const loggedInUser = localStorage.getItem('loggedInUser');
-  if (loggedInUser && list.includes(loggedInUser)) {
-    usernameSelect.value = loggedInUser;
-  }
 }
 // ========== AKHIR DIPERBAIKI ==========
 
